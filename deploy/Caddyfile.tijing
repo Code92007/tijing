@@ -1,0 +1,15 @@
+tijing.wannafly.cn {
+	root * /var/www/tijing
+	encode zstd gzip
+	try_files {path} /index.html
+	file_server
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+	}
+
+	@assets path *.css *.js *.png *.jpg *.jpeg *.gif *.webp *.ico *.woff *.woff2
+	header @assets Cache-Control "public, max-age=604800"
+}

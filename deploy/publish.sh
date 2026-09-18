@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_dir="${1:-/opt/tijing}"
+repo_dir="${1:-/root/tijing}"
 web_root="${2:-/var/www/tijing}"
 
 install -d -m 0755 "$web_root"

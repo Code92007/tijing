@@ -58,7 +58,9 @@ gh api --method POST repos/Code92007/tijing/pages \
 
 ## 4. 部署到 43.155.179.39
 
-先把 DNS 的 `tijing.wannafly.cn` A 记录指向 `43.155.179.39`，然后登录服务器：
+该服务器由 Caddy 统一处理 `443` 和自动 HTTPS，宿主机 `80` 已被现有的 `algo-buddy-nginx` 容器占用。题径直接由 Caddy 从 `/var/www/tijing` 提供静态文件，不新增端口、容器、系统 Nginx 站点或 Certbot 配置。
+
+先把 DNS 的 `tijing.wannafly.cn` A 记录指向 `43.155.179.39`。确认解析生效后登录服务器：
 
 ```bash
 ssh root@43.155.179.39
@@ -67,32 +69,30 @@ ssh root@43.155.179.39
 首次部署：
 
 ```bash
-apt-get update
-apt-get install -y nginx git certbot python3-certbot-nginx
+git clone https://github.com/Code92007/tijing.git /root/tijing
+chmod +x /root/tijing/deploy/publish.sh
+/root/tijing/deploy/publish.sh /root/tijing /var/www/tijing
 
-git clone https://github.com/Code92007/tijing.git /opt/tijing
-chmod +x /opt/tijing/deploy/publish.sh
-/opt/tijing/deploy/publish.sh /opt/tijing /var/www/tijing
+install -d -m 0755 /etc/caddy/sites
+install -m 0644 /root/tijing/deploy/Caddyfile.tijing /etc/caddy/sites/tijing.caddy
+grep -qxF 'import /etc/caddy/sites/*.caddy' /etc/caddy/Caddyfile || printf '\nimport /etc/caddy/sites/*.caddy\n' >> /etc/caddy/Caddyfile
 
-cp /opt/tijing/deploy/nginx-tijing.conf /etc/nginx/sites-available/tijing
-ln -sfn /etc/nginx/sites-available/tijing /etc/nginx/sites-enabled/tijing
-nginx -t
-systemctl reload nginx
-
-certbot --nginx -d tijing.wannafly.cn
+caddy fmt --overwrite /etc/caddy/Caddyfile
+caddy validate --config /etc/caddy/Caddyfile
+systemctl reload caddy
 ```
 
 后续更新：
 
 ```bash
-cd /opt/tijing
+cd /root/tijing
 git pull --ff-only
-./deploy/publish.sh /opt/tijing /var/www/tijing
-nginx -t
-systemctl reload nginx
+./deploy/publish.sh /root/tijing /var/www/tijing
+caddy validate --config /etc/caddy/Caddyfile
+systemctl reload caddy
 ```
 
-Nginx 只发布 `index.html`、`styles.css`、`app.js`、`config.js` 和 `.nojekyll`，不会暴露仓库、数据库脚本或备份工作流。
+Caddy 只发布 `/var/www/tijing` 中的 `index.html`、`styles.css`、`app.js`、`config.js` 和 `.nojekyll`，不会暴露仓库、数据库脚本或备份工作流。由于服务器全局关闭了 Caddy 的 HTTP 重定向，正式入口使用 `https://tijing.wannafly.cn/`。
 
 ## 5. GitHub 自动备份
 
