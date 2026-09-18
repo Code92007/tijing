@@ -1,4 +1,5 @@
-const STORAGE_KEY = "tijing-data-v3";
+const STORAGE_KEY = "tijing-data-v5";
+const PENDING_KEY = "tijing-pending-sync-v1";
 
 const seedData = {
   topics: [
@@ -187,6 +188,17 @@ const state = {
   lessonExpanded: false
 };
 
+const cloud = {
+  enabled: false,
+  client: null,
+  user: null,
+  version: 0,
+  updatedAt: null,
+  status: "local",
+  error: "",
+  channel: null
+};
+
 const els = {
   sidebar: document.querySelector("#sidebar"),
   sidebarScrim: document.querySelector("#sidebarScrim"),
@@ -195,6 +207,7 @@ const els = {
   topicNav: document.querySelector("#topicNav"),
   breadcrumb: document.querySelector("#breadcrumb"),
   globalSearch: document.querySelector("#globalSearch"),
+  syncStatusButton: document.querySelector("#syncStatusButton"),
   knowledgeView: document.querySelector("#knowledgeView"),
   contestView: document.querySelector("#contestView"),
   knowledgeContent: document.querySelector("#knowledgeContent"),
@@ -223,8 +236,203 @@ function loadData() {
   }
 }
 
-function saveData() {
+function cacheData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+}
+
+function validateCatalog(data) {
+  return Boolean(data && Array.isArray(data.topics) && data.topics.length && Array.isArray(data.problems) && Array.isArray(data.contests));
+}
+
+function getPendingSync() {
+  try {
+    const pending = JSON.parse(localStorage.getItem(PENDING_KEY));
+    return pending && validateCatalog(pending.data) ? pending : null;
+  } catch {
+    return null;
+  }
+}
+
+function setPendingSync(data, expectedVersion) {
+  localStorage.setItem(PENDING_KEY, JSON.stringify({
+    data,
+    expectedVersion,
+    savedAt: new Date().toISOString()
+  }));
+}
+
+function clearPendingSync() {
+  localStorage.removeItem(PENDING_KEY);
+}
+
+async function writeRemoteCatalog(data, expectedVersion) {
+  if (expectedVersion === 0) {
+    const result = await cloud.client
+      .from("catalog")
+      .insert({ id: "main", data, version: 1, updated_by: cloud.user.id })
+      .select("data, version, updated_at")
+      .single();
+    if (result.error) throw result.error;
+    return result.data;
+  }
+
+  const result = await cloud.client
+    .rpc("save_catalog", { payload: data, expected_version: expectedVersion })
+    .single();
+  if (result.error) throw result.error;
+  return result.data;
+}
+
+async function saveData() {
+  cacheData();
+  if (!cloud.enabled) return;
+  if (!cloud.user) throw new Error("请先登录管理员账号");
+
+  const snapshot = structuredClone(state.data);
+  setPendingSync(snapshot, cloud.version);
+  cloud.status = "saving";
+  renderSyncStatus();
+
+  try {
+    const saved = await writeRemoteCatalog(snapshot, cloud.version);
+    cloud.version = saved.version;
+    cloud.updatedAt = saved.updated_at;
+    cloud.status = "synced";
+    cloud.error = "";
+    clearPendingSync();
+    renderSyncStatus();
+  } catch (error) {
+    cloud.status = String(error.message || "").includes("catalog_conflict") ? "conflict" : "offline";
+    cloud.error = error.message || "云端保存失败";
+    renderSyncStatus();
+    throw new Error(cloud.status === "conflict" ? "云端已有更新，本机修改已保留待处理" : "云端保存失败，修改已保存在本机待同步");
+  }
+}
+
+async function loadRemoteData({ silent = false } = {}) {
+  if (!cloud.enabled) return;
+  cloud.status = "loading";
+  renderSyncStatus();
+
+  const result = await cloud.client
+    .from("catalog")
+    .select("data, version, updated_at")
+    .eq("id", "main")
+    .maybeSingle();
+
+  if (result.error) {
+    cloud.status = "offline";
+    cloud.error = result.error.message;
+    renderSyncStatus();
+    if (!silent) showToast("云端连接失败，正在使用本地副本");
+    return;
+  }
+
+  const pending = getPendingSync();
+  const remote = result.data;
+  if (pending) {
+    state.data = pending.data;
+    cacheData();
+    cloud.version = remote?.version || 0;
+    cloud.updatedAt = remote?.updated_at || null;
+
+    if (cloud.user && pending.expectedVersion === cloud.version) {
+      try {
+        const saved = await writeRemoteCatalog(pending.data, pending.expectedVersion);
+        cloud.version = saved.version;
+        cloud.updatedAt = saved.updated_at;
+        cloud.status = "synced";
+        cloud.error = "";
+        clearPendingSync();
+        if (!silent) showToast("本机待同步修改已上传");
+      } catch (error) {
+        cloud.status = String(error.message || "").includes("catalog_conflict") ? "conflict" : "offline";
+        cloud.error = error.message || "待同步修改上传失败";
+      }
+    } else {
+      cloud.status = pending.expectedVersion === cloud.version ? (cloud.user ? "offline" : "readonly") : "conflict";
+    }
+  } else if (remote && validateCatalog(remote.data)) {
+    state.data = remote.data;
+    cloud.version = remote.version;
+    cloud.updatedAt = remote.updated_at;
+    cloud.status = cloud.user ? "synced" : "readonly";
+    cloud.error = "";
+    cacheData();
+  } else {
+    cloud.version = 0;
+    cloud.updatedAt = null;
+    cloud.status = cloud.user ? "synced" : "readonly";
+  }
+
+  if (!state.data.topics.some((topic) => topic.id === state.topicId)) state.topicId = state.data.topics[0].id;
+  render();
+}
+
+function subscribeToRemoteCatalog() {
+  if (!cloud.enabled || cloud.channel) return;
+  cloud.channel = cloud.client
+    .channel("catalog-live")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "catalog", filter: "id=eq.main" },
+      (payload) => {
+        const next = payload.new;
+        if (!next || !validateCatalog(next.data) || next.version <= cloud.version) return;
+        if (getPendingSync()) {
+          cloud.status = "conflict";
+          cloud.version = next.version;
+          cloud.updatedAt = next.updated_at;
+          renderSyncStatus();
+          showToast("云端有新版本，本机待同步修改仍已保留");
+          return;
+        }
+        state.data = next.data;
+        cloud.version = next.version;
+        cloud.updatedAt = next.updated_at;
+        cloud.status = cloud.user ? "synced" : "readonly";
+        cacheData();
+        render();
+        showToast("已同步另一端的更新");
+      }
+    )
+    .subscribe();
+}
+
+async function initializeCloud() {
+  const config = window.TIJING_CONFIG || {};
+  const url = String(config.supabaseUrl || "").trim();
+  const key = String(config.supabasePublishableKey || config.supabaseAnonKey || "").trim();
+  if (!url || !key) {
+    cloud.status = "local";
+    renderSyncStatus();
+    return;
+  }
+  if (!window.supabase?.createClient) {
+    cloud.status = "offline";
+    cloud.error = "Supabase 客户端未加载";
+    renderSyncStatus();
+    return;
+  }
+
+  cloud.enabled = true;
+  cloud.status = "loading";
+  cloud.client = window.supabase.createClient(url, key, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  });
+  renderSyncStatus();
+
+  const sessionResult = await cloud.client.auth.getSession();
+  cloud.user = sessionResult.data.session?.user || null;
+  cloud.client.auth.onAuthStateChange((_event, session) => {
+    const previousUser = cloud.user?.id;
+    cloud.user = session?.user || null;
+    if (cloud.user?.id !== previousUser) loadRemoteData({ silent: true });
+    else renderSyncStatus();
+  });
+
+  await loadRemoteData({ silent: true });
+  subscribeToRemoteCatalog();
 }
 
 function escapeHtml(value = "") {
@@ -259,6 +467,23 @@ function difficultyClass(value) {
 
 function renderIcons() {
   if (window.lucide) window.lucide.createIcons();
+}
+
+function renderSyncStatus() {
+  const statuses = {
+    local: { label: "本地模式", icon: "hard-drive", title: "尚未配置云端数据库" },
+    loading: { label: "正在同步", icon: "loader-circle", title: "正在读取云端数据" },
+    readonly: { label: "云端只读", icon: "cloud", title: "已连接数据库，登录后可以修改" },
+    synced: { label: "已同步", icon: "cloud-check", title: `云端版本 ${cloud.version}` },
+    saving: { label: "正在保存", icon: "cloud-upload", title: "正在写入云端数据库" },
+    offline: { label: "离线副本", icon: "cloud-off", title: cloud.error || "云端暂时不可用，本机修改会保留" },
+    conflict: { label: "同步冲突", icon: "triangle-alert", title: "云端和本机都有新修改，本机副本已保留" }
+  };
+  const status = statuses[cloud.status] || statuses.local;
+  els.syncStatusButton.className = `sync-status-button is-${cloud.status}`;
+  els.syncStatusButton.title = status.title;
+  els.syncStatusButton.innerHTML = `<i data-lucide="${status.icon}"></i><span>${status.label}</span>`;
+  renderIcons();
 }
 
 function render() {
@@ -301,6 +526,7 @@ function renderTopbar() {
   els.globalSearch.placeholder = state.route === "knowledge" ? "搜索题目、OJ 或标签" : "搜索比赛、OJ 或标签";
   els.knowledgeView.hidden = state.route !== "knowledge";
   els.contestView.hidden = state.route !== "contests";
+  renderSyncStatus();
 }
 
 function matchesQuery(problem) {
@@ -538,7 +764,9 @@ function openModal(type) {
     problem: { eyebrow: "PROBLEM", title: "收录题目", button: "保存题目" },
     contest: { eyebrow: "CONTEST", title: "收藏比赛", button: "保存比赛" },
     topic: { eyebrow: "KNOWLEDGE", title: "新增知识点", button: "创建知识点" },
-    article: { eyebrow: "LESSON", title: "编辑教学内容", button: "保存内容" }
+    article: { eyebrow: "LESSON", title: "编辑教学内容", button: "保存内容" },
+    login: { eyebrow: "CLOUD", title: "管理员登录", button: "发送登录链接" },
+    account: { eyebrow: "SYNC", title: "云端同步", button: "退出登录" }
   };
   const config = configs[type];
   els.modalEyebrow.textContent = config.eyebrow;
@@ -552,6 +780,17 @@ function openModal(type) {
 }
 
 function getFormFields(type) {
+  if (type === "login") {
+    return `
+      <label class="field"><span>管理员邮箱</span><input name="email" type="email" required autocomplete="email" placeholder="name@example.com" /></label>
+      <div class="account-summary"><strong>邮箱魔法链接</strong><span>登录链接会发送到管理员邮箱，有效会话仅保存在当前浏览器。</span></div>`;
+  }
+  if (type === "account") {
+    const pending = getPendingSync();
+    return `
+      <div class="account-summary"><strong>${escapeHtml(cloud.user?.email || "已登录")}</strong><span>云端版本 ${cloud.version}${cloud.updatedAt ? ` · ${new Date(cloud.updatedAt).toLocaleString("zh-CN")}` : ""}</span></div>
+      ${pending ? `<div class="account-summary"><strong>本机有待同步修改</strong><span>${escapeHtml(pending.savedAt || "")}</span></div>` : ""}`;
+  }
   if (type === "problem") {
     return `
       <label class="field"><span>题目名称</span><input name="title" required placeholder="例如：单源最短路径（标准版）" /></label>
@@ -605,13 +844,45 @@ function slugify(input) {
   return `${latin || "topic"}-${Date.now().toString(36).slice(-4)}`;
 }
 
-function handleSubmit(event) {
+async function handleSubmit(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const type = state.modalType;
+  els.submitButton.disabled = true;
+
+  if (type === "login") {
+    const redirectUrl = `${location.origin}${location.pathname}`;
+    const result = await cloud.client.auth.signInWithOtp({
+      email: form.get("email").trim(),
+      options: { emailRedirectTo: redirectUrl }
+    });
+    els.submitButton.disabled = false;
+    if (result.error) {
+      showToast(result.error.message || "登录链接发送失败");
+      return;
+    }
+    closeModal();
+    showToast("登录链接已发送，请检查邮箱");
+    return;
+  }
+
+  if (type === "account") {
+    const result = await cloud.client.auth.signOut();
+    els.submitButton.disabled = false;
+    if (result.error) {
+      showToast("退出登录失败");
+      return;
+    }
+    closeModal();
+    showToast("已退出管理员账号");
+    return;
+  }
+
+  let successMessage = "已保存";
   if (type === "problem") {
     const knowledge = form.getAll("knowledge");
     if (!knowledge.length) {
+      els.submitButton.disabled = false;
       showToast("请至少选择一个知识点");
       return;
     }
@@ -629,7 +900,7 @@ function handleSubmit(event) {
     });
     state.topicId = knowledge[0];
     state.route = "knowledge";
-    showToast("题目已加入题单");
+    successMessage = "题目已加入题单";
   } else if (type === "contest") {
     state.data.contests.unshift({
       id: `c-${Date.now()}`,
@@ -642,7 +913,7 @@ function handleSubmit(event) {
       featured: state.data.contests.length === 0
     });
     state.route = "contests";
-    showToast("比赛已收藏");
+    successMessage = "比赛已收藏";
   } else if (type === "topic") {
     const name = form.get("name").trim();
     const id = slugify(name);
@@ -655,7 +926,7 @@ function handleSubmit(event) {
     });
     state.topicId = id;
     state.route = "knowledge";
-    showToast("知识点已创建");
+    successMessage = "知识点已创建";
   } else if (type === "article") {
     const topic = getTopic(form.get("topicId"));
     topic.article = {
@@ -665,9 +936,17 @@ function handleSubmit(event) {
     };
     state.topicId = topic.id;
     state.route = "knowledge";
-    showToast("教学内容已更新");
+    successMessage = "教学内容已更新";
   }
-  saveData();
+
+  try {
+    await saveData();
+    showToast(successMessage);
+  } catch (error) {
+    showToast(error.message || "保存失败，本机修改已保留");
+  } finally {
+    els.submitButton.disabled = false;
+  }
   closeModal();
   render();
 }
@@ -680,7 +959,7 @@ function showToast(message) {
   toastTimer = setTimeout(() => els.toast.classList.remove("is-visible"), 2200);
 }
 
-document.addEventListener("click", (event) => {
+document.addEventListener("click", async (event) => {
   const routeButton = event.target.closest("[data-route]");
   if (routeButton) navigate(routeButton.dataset.route);
 
@@ -698,7 +977,14 @@ document.addEventListener("click", (event) => {
   }
 
   const addTarget = event.target.closest("[data-add]");
-  if (addTarget) openModal(addTarget.dataset.add);
+  if (addTarget) {
+    if (cloud.enabled && !cloud.user) {
+      openModal("login");
+      showToast("登录管理员账号后即可修改云端题单");
+    } else {
+      openModal(addTarget.dataset.add);
+    }
+  }
 
   if (event.target.closest("[data-close-modal]")) closeModal();
 
@@ -713,10 +999,19 @@ document.addEventListener("click", (event) => {
   if (doneButton) {
     const problem = state.data.problems.find((item) => item.id === doneButton.dataset.toggleDone);
     if (problem) {
+      if (cloud.enabled && !cloud.user) {
+        openModal("login");
+        showToast("登录管理员账号后即可更新进度");
+        return;
+      }
       problem.done = !problem.done;
-      saveData();
       render();
-      showToast(problem.done ? "已标记为完成" : "已移回待完成");
+      try {
+        await saveData();
+        showToast(problem.done ? "已标记为完成" : "已移回待完成");
+      } catch (error) {
+        showToast(error.message || "修改已保存在本机待同步");
+      }
     }
   }
 
@@ -732,6 +1027,22 @@ document.addEventListener("click", (event) => {
 els.addButton.addEventListener("click", (event) => {
   event.stopPropagation();
   els.addMenu.classList.toggle("is-open");
+});
+
+els.syncStatusButton.addEventListener("click", async () => {
+  if (!cloud.enabled) {
+    showToast("配置 Supabase 后会启用云端同步");
+    return;
+  }
+  if (!cloud.user) {
+    openModal("login");
+    return;
+  }
+  if (getPendingSync() && cloud.status !== "conflict") {
+    await loadRemoteData();
+    return;
+  }
+  openModal("account");
 });
 
 els.globalSearch.addEventListener("input", (event) => {
@@ -759,3 +1070,8 @@ document.addEventListener("keydown", (event) => {
 });
 
 render();
+initializeCloud().catch((error) => {
+  cloud.status = "offline";
+  cloud.error = error.message || "云端初始化失败";
+  renderSyncStatus();
+});

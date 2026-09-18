@@ -57,6 +57,11 @@ button {
   color: inherit;
 }
 
+button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
 a {
   color: inherit;
 }
@@ -360,6 +365,81 @@ svg {
 
 .topbar-actions {
   gap: 10px;
+}
+
+.sync-status-button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 66%);
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sync-status-button:hover {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.sync-status-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.sync-status-button.is-synced {
+  border-color: #b9d2c4;
+  background: var(--green-soft);
+  color: var(--green-deep);
+}
+
+.sync-status-button.is-saving,
+.sync-status-button.is-loading {
+  border-color: #d7c89e;
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+
+.sync-status-button.is-offline {
+  border-color: #e7bfb4;
+  background: var(--coral-soft);
+  color: #9a4934;
+}
+
+.sync-status-button.is-loading svg,
+.sync-status-button.is-saving svg {
+  animation: sync-spin 900ms linear infinite;
+}
+
+@keyframes sync-spin {
+  to { transform: rotate(360deg); }
+}
+
+.account-summary {
+  display: grid;
+  gap: 5px;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-muted);
+}
+
+.account-summary strong {
+  font-size: 13px;
+}
+
+.account-summary span {
+  color: var(--ink-soft);
+  font-family: "DM Mono", monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
 }
 
 .global-search {
@@ -1436,6 +1516,16 @@ fieldset.field {
 }
 
 @media (max-width: 1040px) {
+  .sync-status-button span {
+    display: none;
+  }
+
+  .sync-status-button {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+
   .example-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1535,7 +1625,7 @@ fieldset.field {
 
   .global-search:focus-within {
     position: absolute;
-    inset: 10px 92px 10px 52px;
+    inset: 10px 138px 10px 52px;
     z-index: 3;
     width: auto;
   }

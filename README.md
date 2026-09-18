@@ -1,17 +1,146 @@
 # 题径
 
-一个用于整理算法竞赛题单、教学内容和比赛链接的纯前端网站。
+面向算法竞赛学习的题单、教学内容与比赛收藏网站。
 
-## 本地运行
+- 前端：纯 HTML/CSS/JavaScript，可同时部署到 GitHub Pages 和自己的 Nginx。
+- 主数据：Supabase Postgres 中的单一、带版本号 JSONB 文档。
+- 权限：所有访问者可读，只有 `catalog_admins` 中的 Supabase 用户可写。
+- 同步：Supabase Realtime 在不同域名和设备间推送最新版本。
+- 容灾：浏览器保留离线副本和待同步修改；GitHub Actions 每日生成等价的 JSON/Markdown 快照。
 
-在当前目录启动任意静态文件服务器，例如：
+## 1. 创建数据库
+
+1. 创建一个 Supabase 项目。
+2. 在 Supabase SQL Editor 中完整执行 [`supabase/schema.sql`](supabase/schema.sql)。
+3. 在 Project Settings > API 中找到 Project URL 和 Publishable key。
+4. 填写 [`config.js`](config.js)：
+
+```js
+window.TIJING_CONFIG = {
+  supabaseUrl: "https://YOUR_PROJECT.supabase.co",
+  supabasePublishableKey: "YOUR_PUBLISHABLE_KEY"
+};
+```
+
+Publishable key 会随前端公开，这是 Supabase 的正常用法；真正的写权限由 RLS 控制。不要把 `service_role` key 写入 `config.js` 或提交到仓库。
+
+## 2. 配置管理员登录
+
+在 Supabase Authentication > URL Configuration 中设置：
+
+- Site URL：`https://tijing.wannafly.cn/`
+- Redirect URLs：
+  - `https://tijing.wannafly.cn/`
+  - `https://code92007.github.io/tijing/`
+  - `http://127.0.0.1:4173/`
+
+部署并打开页面后，点击顶部云端状态按钮，用管理员邮箱接收魔法链接。首次登录创建用户后，在 Supabase SQL Editor 执行：
+
+```sql
+insert into public.catalog_admins (user_id)
+select id from auth.users where email = '你的管理员邮箱'
+on conflict (user_id) do nothing;
+```
+
+此后第一次新增或修改内容会创建 `catalog/main` 数据行。其他访客只能浏览。
+
+## 3. GitHub Pages
+
+仓库根目录可以直接发布，无需构建：
+
+```bash
+gh api --method POST repos/Code92007/tijing/pages \
+  -f 'source[branch]=main' \
+  -f 'source[path]=/'
+```
+
+发布地址：<https://code92007.github.io/tijing/>
+
+## 4. 部署到 43.155.179.39
+
+先把 DNS 的 `tijing.wannafly.cn` A 记录指向 `43.155.179.39`，然后登录服务器：
+
+```bash
+ssh root@43.155.179.39
+```
+
+首次部署：
+
+```bash
+apt-get update
+apt-get install -y nginx git certbot python3-certbot-nginx
+
+git clone https://github.com/Code92007/tijing.git /opt/tijing
+chmod +x /opt/tijing/deploy/publish.sh
+/opt/tijing/deploy/publish.sh /opt/tijing /var/www/tijing
+
+cp /opt/tijing/deploy/nginx-tijing.conf /etc/nginx/sites-available/tijing
+ln -sfn /etc/nginx/sites-available/tijing /etc/nginx/sites-enabled/tijing
+nginx -t
+systemctl reload nginx
+
+certbot --nginx -d tijing.wannafly.cn
+```
+
+后续更新：
+
+```bash
+cd /opt/tijing
+git pull --ff-only
+./deploy/publish.sh /opt/tijing /var/www/tijing
+nginx -t
+systemctl reload nginx
+```
+
+Nginx 只发布 `index.html`、`styles.css`、`app.js`、`config.js` 和 `.nojekyll`，不会暴露仓库、数据库脚本或备份工作流。
+
+## 5. GitHub 自动备份
+
+在 GitHub 仓库 Settings > Secrets and variables > Actions 添加：
+
+- `SUPABASE_URL`：项目 URL。
+- `SUPABASE_SERVICE_ROLE_KEY`：Supabase 的 service role key，仅供备份工作流使用。
+
+也可以通过 CLI 逐个安全输入：
+
+```bash
+gh secret set SUPABASE_URL --repo Code92007/tijing
+gh secret set SUPABASE_SERVICE_ROLE_KEY --repo Code92007/tijing
+```
+
+数据库首次写入后，手动试跑备份：
+
+```bash
+gh workflow run backup.yml --repo Code92007/tijing
+```
+
+之后工作流每天北京时间约 03:17 执行。只有数据变化时才会产生 Git commit：
+
+- `backups/catalog.json`：机器可读的完整快照。
+- `backups/catalog.md`：可直接阅读，并内嵌同一份可恢复 JSON。
+
+## 6. 恢复
+
+推荐在 GitHub Actions 中手动运行 `Restore catalog`：
+
+1. `backup_path` 填 `backups/catalog.json` 或 `backups/catalog.md`。
+2. `confirmation` 填 `RESTORE_MAIN_CATALOG`。
+
+也可在可信机器上执行：
+
+```bash
+export SUPABASE_URL='https://YOUR_PROJECT.supabase.co'
+export SUPABASE_SERVICE_ROLE_KEY='YOUR_SERVICE_ROLE_KEY'
+export RESTORE_CONFIRM='RESTORE_MAIN_CATALOG'
+node scripts/restore-catalog.mjs backups/catalog.json
+```
+
+恢复会写入一个更高的数据库版本，所有已打开的页面会通过 Realtime 收到恢复后的数据。
+
+## 本地预览
 
 ```bash
 python3 -m http.server 4173 --bind 127.0.0.1
 ```
 
-然后访问 <http://127.0.0.1:4173/>。
-
-## 数据
-
-新增的知识点、题目、教学内容、比赛和完成状态都保存在当前浏览器的 `localStorage` 中。题目链接支持任意 OJ 的完整 URL，同一道题可以选择多个知识点。
+访问 <http://127.0.0.1:4173/>。

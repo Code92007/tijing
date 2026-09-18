@@ -72,6 +72,10 @@
           </div>
 
           <div class="topbar-actions">
+            <button class="sync-status-button is-local" id="syncStatusButton" title="本地模式">
+              <i data-lucide="hard-drive"></i>
+              <span id="syncStatusText">本地模式</span>
+            </button>
             <label class="global-search">
               <i data-lucide="search"></i>
               <input id="globalSearch" type="search" placeholder="搜索题目、OJ 或标签" autocomplete="off" />
@@ -130,6 +134,8 @@
       <span id="toastText">已保存</span>
     </div>
 
+    <script src="config.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="app.js"></script>
   </body>

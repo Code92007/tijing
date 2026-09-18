@@ -1,0 +1,31 @@
+name: Restore catalog
+
+on:
+  workflow_dispatch:
+    inputs:
+      backup_path:
+        description: "Repository path to catalog.json or catalog.md"
+        required: true
+        default: "backups/catalog.json"
+      confirmation:
+        description: "Type RESTORE_MAIN_CATALOG"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  restore:
+    if: ${{ inputs.confirmation == 'RESTORE_MAIN_CATALOG' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Restore selected snapshot
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESTORE_CONFIRM: RESTORE_MAIN_CATALOG
+        run: node scripts/restore-catalog.mjs "${{ inputs.backup_path }}"
