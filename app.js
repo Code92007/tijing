@@ -1,4 +1,4 @@
-const STORAGE_KEY = "tijing-data-v2";
+const STORAGE_KEY = "tijing-data-v3";
 
 const seedData = {
   topics: [
@@ -78,42 +78,6 @@ const seedData = {
   ],
   problems: [
     {
-      id: "p1",
-      title: "【模板】单源最短路径（标准版）",
-      problemId: "P4779",
-      oj: "洛谷",
-      url: "https://www.luogu.com.cn/problem/P4779",
-      difficulty: "中等",
-      knowledge: ["graph", "data-structure"],
-      kind: "classic",
-      note: "Dijkstra 的标准实现，适合配合优先队列理解松弛操作。",
-      done: true
-    },
-    {
-      id: "p2",
-      title: "Dijkstra?",
-      problemId: "20C",
-      oj: "Codeforces",
-      url: "https://codeforces.com/problemset/problem/20/C",
-      difficulty: "中等",
-      knowledge: ["graph", "data-structure"],
-      kind: "classic",
-      note: "除了最短距离，还要记录并还原一条具体路径。",
-      done: true
-    },
-    {
-      id: "p3",
-      title: "Network Delay Time",
-      problemId: "743",
-      oj: "LeetCode",
-      url: "https://leetcode.cn/problems/network-delay-time/",
-      difficulty: "中等",
-      knowledge: ["graph"],
-      kind: "classic",
-      note: "用传播时间理解单源最短路结果的含义。",
-      done: false
-    },
-    {
       id: "p4",
       title: "灾后重建",
       problemId: "P1119",
@@ -150,18 +114,6 @@ const seedData = {
       done: false
     },
     {
-      id: "p7",
-      title: "最大子段和",
-      problemId: "P1115",
-      oj: "洛谷",
-      url: "https://www.luogu.com.cn/problem/P1115",
-      difficulty: "简单",
-      knowledge: ["dp", "greedy"],
-      kind: "classic",
-      note: "用最精简的状态理解线性 DP。",
-      done: true
-    },
-    {
       id: "p8",
       title: "加分二叉树",
       problemId: "P1040",
@@ -171,30 +123,6 @@ const seedData = {
       knowledge: ["dp"],
       kind: "training",
       note: "区间 DP 与方案恢复。",
-      done: false
-    },
-    {
-      id: "p9",
-      title: "食物链",
-      problemId: "P2024",
-      oj: "洛谷",
-      url: "https://www.luogu.com.cn/problem/P2024",
-      difficulty: "中等",
-      knowledge: ["data-structure"],
-      kind: "classic",
-      note: "扩展域并查集的典型建模。",
-      done: false
-    },
-    {
-      id: "p10",
-      title: "Radio Transmission",
-      problemId: "P4391",
-      oj: "洛谷",
-      url: "https://www.luogu.com.cn/problem/P4391",
-      difficulty: "中等",
-      knowledge: ["strings"],
-      kind: "classic",
-      note: "用前缀函数寻找最短循环节。",
       done: false
     }
   ],
