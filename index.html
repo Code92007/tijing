@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="题径 - 面向算法竞赛学习的题单与比赛收藏工具" />
+    <title>题径 · 算法竞赛题单</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="brand-row">
+          <button class="brand" data-route="knowledge" aria-label="返回知识点首页">
+            <span class="brand-mark">题</span>
+            <span class="brand-name">题径</span>
+          </button>
+          <button class="icon-button sidebar-close" id="sidebarClose" aria-label="关闭导航" title="关闭导航">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+
+        <nav class="main-nav" aria-label="主导航">
+          <button class="nav-item is-active" data-route="knowledge">
+            <i data-lucide="library-big"></i>
+            <span>知识点题单</span>
+          </button>
+          <button class="nav-item" data-route="contests">
+            <i data-lucide="trophy"></i>
+            <span>比赛收藏</span>
+            <span class="nav-count" id="contestNavCount">0</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-section">
+          <div class="sidebar-label-row">
+            <span class="sidebar-label">知识点</span>
+            <button class="mini-icon-button" data-add="topic" aria-label="新增知识点" title="新增知识点">
+              <i data-lucide="plus"></i>
+            </button>
+          </div>
+          <div class="topic-nav" id="topicNav"></div>
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="progress-head">
+            <span>本周进度</span>
+            <strong id="weeklyProgressText">0 / 0</strong>
+          </div>
+          <div class="progress-track" aria-hidden="true">
+            <span id="weeklyProgressBar"></span>
+          </div>
+          <p>保持节奏，比一次刷很多更重要。</p>
+        </div>
+      </aside>
+
+      <div class="sidebar-scrim" id="sidebarScrim"></div>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div class="topbar-start">
+            <button class="icon-button menu-button" id="menuButton" aria-label="打开导航" title="打开导航">
+              <i data-lucide="menu"></i>
+            </button>
+            <div class="breadcrumb" id="breadcrumb"></div>
+          </div>
+
+          <div class="topbar-actions">
+            <label class="global-search">
+              <i data-lucide="search"></i>
+              <input id="globalSearch" type="search" placeholder="搜索题目、OJ 或标签" autocomplete="off" />
+              <kbd>⌘ K</kbd>
+            </label>
+            <div class="add-wrap">
+              <button class="primary-button" id="addButton">
+                <i data-lucide="plus"></i>
+                <span>新建</span>
+                <i data-lucide="chevron-down" class="chevron"></i>
+              </button>
+              <div class="add-menu" id="addMenu" role="menu">
+                <button role="menuitem" data-add="problem"><i data-lucide="file-plus-2"></i><span><strong>题目</strong><small>收录来自任意 OJ 的题目</small></span></button>
+                <button role="menuitem" data-add="article"><i data-lucide="notebook-pen"></i><span><strong>教学内容</strong><small>补充讲解、思路或笔记</small></span></button>
+                <button role="menuitem" data-add="contest"><i data-lucide="trophy"></i><span><strong>比赛</strong><small>收藏一场值得回看的比赛</small></span></button>
+                <button role="menuitem" data-add="topic"><i data-lucide="tags"></i><span><strong>知识点</strong><small>扩展题单分类</small></span></button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <section class="view" id="knowledgeView">
+          <div id="knowledgeContent"></div>
+        </section>
+
+        <section class="view" id="contestView" hidden>
+          <div id="contestContent"></div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal-layer" id="modalLayer" hidden>
+      <div class="modal-backdrop" data-close-modal></div>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-header">
+          <div>
+            <span class="eyebrow" id="modalEyebrow">新增</span>
+            <h2 id="modalTitle">收录题目</h2>
+          </div>
+          <button class="icon-button" data-close-modal aria-label="关闭" title="关闭">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <form id="entryForm">
+          <div class="modal-body" id="formFields"></div>
+          <div class="modal-footer">
+            <button type="button" class="ghost-button" data-close-modal>取消</button>
+            <button type="submit" class="primary-button" id="submitButton">保存</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <i data-lucide="check"></i>
+      <span id="toastText">已保存</span>
+    </div>
+
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
