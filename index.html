@@ -11,7 +11,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=6" />
+    <link rel="stylesheet" href="styles.css?v=7" />
   </head>
   <body>
     <div class="app-shell">
@@ -41,7 +41,7 @@
         <div class="sidebar-section">
           <div class="sidebar-label-row">
             <span class="sidebar-label">知识点</span>
-            <button class="mini-icon-button" data-add="topic" aria-label="新增知识点" title="新增知识点">
+            <button class="mini-icon-button" id="sidebarAddButton" data-add="topic" aria-label="新增知识点" title="新增知识点">
               <i data-lucide="plus"></i>
             </button>
           </div>
@@ -121,7 +121,7 @@
         </div>
         <form id="entryForm">
           <div class="modal-body" id="formFields"></div>
-          <div class="modal-footer">
+          <div class="modal-footer" id="modalFooter">
             <button type="button" class="ghost-button" data-close-modal>取消</button>
             <button type="submit" class="primary-button" id="submitButton">保存</button>
           </div>
@@ -134,9 +134,9 @@
       <span id="toastText">已保存</span>
     </div>
 
-    <script src="config.js?v=6"></script>
+    <script src="config.js?v=7"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-    <script src="app.js?v=6"></script>
+    <script src="app.js?v=7"></script>
   </body>
 </html>

@@ -6,14 +6,14 @@
 - 题单：支持一级知识点、标准/自定义子专题、多知识点归类和可检索的技巧标签。
 - 个人进度：完成状态和本周进度保存在当前浏览器，无需账号，也不会改动共享题单。
 - 主数据：Supabase Postgres 中的单一、带版本号 JSONB 文档。
-- 权限：所有访问者可读，只有 `catalog_admins` 中的 Supabase 用户可写。
+- 权限：所有访问者可读并可投稿题目或题解，只有 `catalog_admins` 中的 Supabase 用户可编辑和审核。
 - 同步：Supabase Realtime 在不同域名和设备间推送最新版本。
 - 容灾：浏览器保留离线副本和待同步修改；GitHub Actions 每日生成等价的 JSON/Markdown 快照。
 
 ## 1. 创建数据库
 
 1. 创建一个 Supabase 项目。
-2. 在 Supabase SQL Editor 中完整执行 [`supabase/schema.sql`](supabase/schema.sql)。
+2. 在 Supabase SQL Editor 中完整执行 [`supabase/schema.sql`](supabase/schema.sql)。已有项目升级时也要重新完整执行一次；脚本是幂等的，会补齐投稿表、审核策略和管理员权限函数。
 3. 在 Project Settings > API 中找到 Project URL 和 Publishable key。
 4. 填写 [`config.js`](config.js)：
 
@@ -44,7 +44,9 @@ select id from auth.users where email = '你的管理员邮箱'
 on conflict (user_id) do nothing;
 ```
 
-此后第一次新增或修改内容会创建 `catalog/main` 数据行。其他访客只能修改自己的本地完成状态，不能修改共享题单。
+此后第一次新增或修改内容会创建 `catalog/main` 数据行。管理员可以在顶部“新建 > 投稿审核”处理题目和题解投稿；访客只能浏览、投稿，并修改保存在当前浏览器中的完成状态，不能直接改动共享题单。
+
+题目投稿审核通过后会进入所选的经典例题或实战训练；题解投稿审核通过后会附在对应题目下。投稿使用独立的 `catalog_submissions` 表，公开端只能插入待审核记录，不能读取、修改或直接写入正式题单。
 
 个人进度不会在设备、浏览器或 `tijing.wannafly.cn` 与 GitHub Pages 两个域名之间同步；清除浏览器站点数据也会清除该进度。题目、专题和比赛等主数据仍按后续章节进行云端同步与备份。
 

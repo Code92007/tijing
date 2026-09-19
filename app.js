@@ -3,7 +3,25 @@ const PENDING_KEY = "tijing-pending-sync-v1";
 const PROGRESS_KEY = "tijing-progress-v1";
 const PRESET_PROBLEM_IDS = new Set(["p4", "p5", "p6", "p8"]);
 const PRESET_CONTEST_IDS = new Set(["c1", "c2", "c3", "c4"]);
-const CATALOG_SCHEMA_VERSION = 4;
+const REMOVED_PROBLEM_IDS = new Set([
+  "dp-digit-hdu3652",
+  "dp-digit-cf55-d",
+  "dp-digit-probability-cf54-c",
+  "dp-digit-hdu4352",
+  "dp-probability-cf167-b",
+  "dp-probability-cf280-c",
+  "dp-probability-cf1540-b"
+]);
+const REMOVED_PROBLEM_SOURCES = new Set([
+  "hdu:3652",
+  "codeforces:55d",
+  "codeforces:54c",
+  "hdu:4352",
+  "codeforces:167b",
+  "codeforces:280c",
+  "codeforces:1540b"
+]);
+const CATALOG_SCHEMA_VERSION = 5;
 
 const defaultDpSubtopics = [
   { id: "dp-linear", name: "线性 DP", description: "沿序列或阶段推进状态，处理前缀、子序列与多状态转移。" },
@@ -11,13 +29,13 @@ const defaultDpSubtopics = [
   { id: "dp-interval", name: "区间 DP", description: "按区间长度组织转移，处理合并、分割与括号结构。" },
   { id: "dp-tree", name: "树形 DP", description: "在树上汇总子树信息，设计父子状态与合并方式。" },
   { id: "dp-bitmask", name: "状态压缩 DP", description: "用位集合表示选择状态，解决小规模组合决策问题。" },
-  { id: "dp-subset", name: "子集 DP", description: "围绕子集枚举、子集划分与补集关系组织转移。" },
-  { id: "dp-sos", name: "SOS DP", description: "沿子集包含关系做高维前缀和与信息聚合。" },
+  { id: "dp-subset", name: "子集 DP", parentId: "dp-bitmask", description: "围绕子集枚举、子集划分与补集关系组织转移。" },
+  { id: "dp-sos", name: "SOS DP", parentId: "dp-bitmask", description: "沿子集包含关系做高维前缀和与信息聚合。" },
   { id: "dp-digit", name: "数位 DP", description: "按数位处理上界、前导零与自动机状态，统计区间内的数字。" },
   { id: "dp-probability", name: "概率 / 期望 DP", description: "用概率转移、期望线性性与贡献拆分刻画随机过程。" }
 ].map((topic, index) => ({
   ...topic,
-  parentId: "dp",
+  parentId: topic.parentId || "dp",
   group: "standard",
   color: ["#4f78b5", "#8a6a3f", "#b75c49", "#4b8063", "#735d9f", "#2f7d83", "#a05d75", "#5f6f3d", "#a46532"][index],
   article: {
@@ -29,16 +47,29 @@ const defaultDpSubtopics = [
 
 const defaultDpCustomTopics = [
   {
+    id: "dp-optimization",
+    name: "DP 优化",
+    description: "整理转移松弛、数据结构维护与复杂度优化等让 DP 真正可过的技巧。",
+    parentId: "dp",
+    group: "custom",
+    color: "#536f94",
+    article: {
+      title: "从朴素转移到可通过的 DP",
+      body: ["从原始状态和转移出发，识别重复计算、无效枚举与可维护的最优信息，再选择前缀和、单调结构或数据结构完成优化。"],
+      outline: ["写出朴素转移", "定位复杂度瓶颈", "选择可证明的优化结构"]
+    }
+  },
+  {
     id: "dp-wrong-solutions",
     name: "错解不优",
-    description: "记录能通过但不够优、复杂度分析有误或需要进一步松弛优化的解法。",
+    description: "记录错误思路、复杂度分析失误，以及看似可行但不能稳定通过的解法。",
     parentId: "dp",
     group: "custom",
     color: "#8b4f4f",
     article: {
-      title: "从可过到更优：复盘错解与松弛过程",
-      body: ["保留错误思路出现的原因、能通过哪些数据，以及如何从状态和复杂度出发找到更稳健的改进。"],
-      outline: ["复现原始思路", "定位复杂度或正确性问题", "整理可迁移的改进方法"]
+      title: "复盘错解：找到推导中的断点",
+      body: ["保留错误思路出现的原因、能通过哪些数据，以及反例或复杂度分析从哪里推翻了原方案。"],
+      outline: ["复现原始思路", "定位正确性或复杂度问题", "总结可迁移的检查方法"]
     }
   }
 ];
@@ -62,21 +93,21 @@ const reviewedDpProblems = [
   createDpProblem("n12", "training", "CF1542E2 - Abnormal Permutation Pairs", "https://codeforces.com/contest/1542/problem/E2", "Codeforces", "1542E2", "困难", ["dp-linear"], ["排列计数", "组合数学", "贡献 DP"], "围绕排列对的贡献设计计数状态，组合推导和递推结合紧密。"),
   createDpProblem("n13", "classic", "ABC134 F - Permutation Oddness", "https://atcoder.jp/contests/abc134/tasks/abc134_f", "AtCoder", "ABC134 F", "困难", ["dp-linear"], ["排列 DP", "插入法", "贡献维护"], "逐个插入排列元素并维护距离贡献，是排列插入 DP 的标准范例。"),
   createDpProblem("n15", "training", "BAPC 2018 E - Entirely Unsorted Sequences", "https://codeforces.com/gym/102007/problem/E", "GYM", "102007E", "困难", ["dp-linear"], ["计数 DP", "首个非法位置", "多重集排列"], "枚举第一个破坏位置，用补集计数处理含重复元素的排列。"),
-  createDpProblem("n16", "classic", "HDU4055 - Number String", "https://acm.hdu.edu.cn/showproblem.php?pid=4055", "HDU", "4055", "中等", ["dp-linear"], ["排列 DP", "插入法", "前缀和优化", "波浪排列"], "插入新最大值并按相对位置转移；与“置置置换”同构，只保留这一条主记录。"),
-  createDpProblem("n18", "classic", "FZU2129 - 子序列个数", "http://acm.fzu.edu.cn/problem.php?pid=2129", "其他", "FZU2129", "中等", ["dp-linear"], ["本质不同子序列", "last 数组", "去重计数"], "记录每个值上次出现位置，扣除重复贡献，是不同子序列计数的标准模型。"),
+  createDpProblem("n16", "classic", "HDU4055 - Number String", "https://vjudge.net/problem/HDU-4055", "HDU", "4055", "中等", ["dp-linear"], ["排列 DP", "插入法", "前缀和优化", "波浪排列"], "插入新最大值并按相对位置转移；与“置置置换”同构，只保留这一条主记录。"),
+  createDpProblem("n18", "classic", "FZU2129 - 子序列个数", "https://vjudge.net/problem/FZU-2129", "其他", "FZU2129", "中等", ["dp-linear"], ["本质不同子序列", "last 数组", "去重计数"], "记录每个值上次出现位置，扣除重复贡献，是不同子序列计数的标准模型。"),
   createDpProblem("n19", "training", "CF1149B - Three Religions", "https://codeforces.com/contest/1149/problem/B", "Codeforces", "1149B", "困难", ["dp-linear"], ["多序列 DP", "在线子序列", "next 数组"], "动态维护三个串的组合状态，用 next 数组快速判断共同子序列。"),
   createDpProblem("n20", "classic", "CF1110D - Jongmah", "https://codeforces.com/contest/1110/problem/D", "Codeforces", "1110D", "困难", ["dp-linear"], ["局部计数", "滚动状态", "三元组选择"], "把跨值三元组限制在相邻值域内，用小状态滚动完成最优选择。"),
-  createDpProblem("n21", "classic", "HDU4003 - Find Metal Mineral", "https://acm.hdu.edu.cn/showproblem.php?pid=4003", "HDU", "4003", "困难", ["dp-tree", "dp-knapsack"], ["树形背包", "分组背包", "返回状态"], "区分是否返回父节点，在子树间做分组背包合并。"),
+  createDpProblem("n21", "classic", "HDU4003 - Find Metal Mineral", "https://vjudge.net/problem/HDU-4003", "HDU", "4003", "困难", ["dp-tree", "dp-knapsack"], ["树形背包", "分组背包", "返回状态"], "区分是否返回父节点，在子树间做分组背包合并。"),
   createDpProblem("n22", "training", "CF1982E - Number of k-good subarrays", "https://codeforces.com/contest/1982/problem/E", "Codeforces", "1982E", "困难", ["dp-digit"], ["二进制数位 DP", "区间合并", "记忆化搜索"], "把二进制幂次区间的信息作为可合并状态，处理不同长度的数位块。"),
   createDpProblem("n23", "training", "CCPC Guangzhou 2022 M - XOR Sum", "https://codeforces.com/gym/104053/problem/M", "GYM", "104053M", "困难", ["dp-digit", "dp-knapsack"], ["数位背包", "二进制", "余数状态"], "同时记录卡上界数量和当前余数，是数位 DP 与背包状态的交叉模型。"),
   createDpProblem("n24", "training", "CF1734F - Zeros and Ones", "https://codeforces.com/contest/1734/problem/F", "Codeforces", "1734F", "困难", ["dp-digit"], ["Thue-Morse", "进位", "数位递推"], "利用 Thue-Morse 的自相似性，把区间比较转成带进位的数位递推。"),
   createDpProblem("n25", "training", "CF1487F - Ones", "https://codeforces.com/contest/1487/problem/F", "Codeforces", "1487F", "困难", ["dp-digit"], ["高位到低位", "借位", "延迟贡献"], "从高位向低位记录差值和仍会生效的全 1 前缀，处理借位影响。"),
   createDpProblem("n27", "training", "CF1868C - Travel Plan", "https://codeforces.com/contest/1868/problem/C", "Codeforces", "1868C", "困难", ["dp-tree"], ["完全二叉树", "组合计数", "记忆化"], "利用隐式完全二叉树的重复结构，记忆化统计路径贡献。"),
-  createDpProblem("n28", "training", "HDU7401 - 流量监控", "https://acm.hdu.edu.cn/showproblem.php?pid=7401", "HDU", "7401", "困难", ["dp-tree", "dp-knapsack"], ["树形背包", "匹配计数", "二维背包"], "在子树中统计未匹配节点，并用额外维度累计祖先链四元组贡献。"),
+  createDpProblem("n28", "training", "HDU7401 - 流量监控", "https://vjudge.net/problem/HDU-7401", "HDU", "7401", "困难", ["dp-tree", "dp-knapsack"], ["树形背包", "匹配计数", "二维背包"], "在子树中统计未匹配节点，并用额外维度累计祖先链四元组贡献。"),
   createDpProblem("n29", "training", "CCPC Guangzhou 2022 I - Infection", "https://codeforces.com/gym/104053/problem/I", "GYM", "104053I", "困难", ["dp-tree", "dp-knapsack", "dp-probability"], ["树上概率 DP", "树形背包", "感染分布"], "在树上合并感染数量的概率分布，同时覆盖树形、背包和概率 DP。"),
   createDpProblem("n30", "training", "CF1695D2 - Tree Queries", "https://codeforces.com/contest/1695/problem/D2", "Codeforces", "1695D2", "困难", ["dp-tree"], ["树上状态", "结构分类", "叶子贡献"], "围绕树的分叉和叶子结构设计状态，训练树形问题的结构观察。"),
-  createDpProblem("n31", "training", "HDU6540 - Neko and tree", "https://acm.hdu.edu.cn/showproblem.php?pid=6540", "HDU", "6540", "困难", ["dp-tree"], ["树形 DP", "计数", "子树合并"], "在子树间合并计数状态，是正统的树上状态合并训练。"),
-  createDpProblem("n32", "classic", "HDU6035 - Colorful Tree", "https://acm.hdu.edu.cn/showproblem.php?pid=6035", "HDU", "6035", "困难", ["dp-tree"], ["颜色贡献", "补集计数", "树上路径"], "按颜色计算未经过该颜色的路径补集，再汇总所有路径贡献。"),
+  createDpProblem("n31", "training", "HDU6540 - Neko and tree", "https://vjudge.net/problem/HDU-6540", "HDU", "6540", "困难", ["dp-tree"], ["树形 DP", "计数", "子树合并"], "在子树间合并计数状态，是正统的树上状态合并训练。"),
+  createDpProblem("n32", "classic", "HDU6035 - Colorful Tree", "https://vjudge.net/problem/HDU-6035", "HDU", "6035", "困难", ["dp-tree"], ["颜色贡献", "补集计数", "树上路径"], "按颜色计算未经过该颜色的路径补集，再汇总所有路径贡献。"),
   createDpProblem("n33", "training", "2020 小米邀请赛决赛 J - Rikka with Book", "https://ac.nowcoder.com/acm/contest/9328/J", "牛客", "9328 J", "困难", ["dp-bitmask"], ["状态压缩 DP", "子集划分", "集合收益"], "预处理集合收益并枚举子集划分，完成小规模集合决策。"),
   createDpProblem("n34", "training", "CF1392G - Omkar and Pies", "https://codeforces.com/contest/1392/problem/G", "Codeforces", "1392G", "困难", ["dp-bitmask", "dp-subset"], ["置换状态", "滑动区间", "子集状态"], "用掩码描述短串置换结果，在超长操作序列上维护最优区间。"),
   createDpProblem("n35", "training", "CF1313D - Happy New Year", "https://codeforces.com/contest/1313/problem/D", "Codeforces", "1313D", "困难", ["dp-bitmask", "dp-subset"], ["扫描线", "超集转移", "局部轮廓"], "利用每点覆盖次数很小，把扫描线活跃区间压成局部掩码。"),
@@ -84,7 +115,7 @@ const reviewedDpProblems = [
   createDpProblem("n37", "classic", "ABC325 G - offence", "https://atcoder.jp/contests/abc325/tasks/abc325_g", "AtCoder", "ABC325 G", "中等", ["dp-interval"], ["字符串消除", "区间合并", "端点转移"], "按区间合并删除结果，是字符串消除类区间 DP 的清晰入门题。"),
   createDpProblem("n38", "training", "CF1870E - Another MEX Problem", "https://codeforces.com/contest/1870/problem/E", "Codeforces", "1870E", "困难", ["dp-bitmask", "dp-subset"], ["MEX", "集合状态", "子集转移"], "把可出现的 MEX 集合压成状态，处理多段选择带来的集合变化。"),
   createDpProblem("n39", "training", "CF1863F - Divide, XOR, and Conquer", "https://codeforces.com/contest/1863/problem/F", "Codeforces", "1863F", "困难", ["dp-interval"], ["XOR", "端点性质", "区间可达性"], "利用总 XOR 的最高位性质判断区间端点能否继续扩展。"),
-  createDpProblem("n40", "classic", "HDU4283 - You Are the One", "https://acm.hdu.edu.cn/showproblem.php?pid=4283", "HDU", "4283", "中等", ["dp-interval"], ["出栈顺序", "区间分割", "代价 DP"], "枚举首元素最终出现的位置，把左右部分拆成独立区间。"),
+  createDpProblem("n40", "classic", "HDU4283 - You Are the One", "https://vjudge.net/problem/HDU-4283", "HDU", "4283", "中等", ["dp-interval"], ["出栈顺序", "区间分割", "代价 DP"], "枚举首元素最终出现的位置，把左右部分拆成独立区间。"),
   createDpProblem("n41", "classic", "CF1312E - Array Shrinking", "https://codeforces.com/contest/1312/problem/E", "Codeforces", "1312E", "中等", ["dp-interval"], ["区间合并", "两阶段 DP", "最少分段"], "先判断区间能否缩成一个值，再求覆盖整个数组的最少可缩区间数。"),
   createDpProblem("n43", "classic", "POJ1390 - Blocks", "http://poj.org/problem?id=1390", "POJ", "1390", "困难", ["dp-interval"], ["附加维状态", "方块消除", "同色合并"], "用额外维记录右侧已连接的同色块数量，是消除类区间 DP 的代表状态。"),
   createDpProblem("n44", "training", "2020 Wannafly Winter Camp Day6 D - 递增递增", "https://ac.nowcoder.com/acm/problem/201932", "牛客", "NC201932", "困难", ["dp-interval"], ["填坑 DP", "组合计数", "非标准区间状态"], "围绕区间中的空位和递增约束设计填坑状态，适合作为非模板训练。"),
@@ -117,7 +148,7 @@ const reviewedDpProblems = [
   createDpProblem("n75", "classic", "ABC391 G - Many LCS", "https://atcoder.jp/contests/abc391/tasks/abc391_g", "AtCoder", "ABC391 G", "困难", ["dp-bitmask"], ["LCS 数组", "差分掩码", "自动机式转移"], "把一整行 LCS 的相邻差分压成掩码，在追加字符时做有限状态转移。"),
   createDpProblem("n76", "training", "CF2039E - Shohag Loves Inversions", "https://codeforces.com/contest/2039/problem/E", "Codeforces", "2039E", "困难", ["dp-linear"], ["组合数学", "逆序对计数", "递推"], "按新增元素对逆序对的贡献建立组合递推。"),
   createDpProblem("n77", "classic", "ABC231 G - Balls in Boxes", "https://atcoder.jp/contests/abc231/tasks/abc231_g", "AtCoder", "ABC231 G", "困难", ["dp-probability"], ["盒子模型", "组合期望", "概率 DP"], "围绕随机投球后的盒子占用状态计算期望，是标准概率 DP 模型。"),
-  createDpProblem("n79", "training", "HDU6289 - 寻宝游戏", "https://acm.hdu.edu.cn/showproblem.php?pid=6289", "HDU", "6289", "困难", ["dp-linear", "dp-knapsack"], ["网格 DP", "换入换出", "消除后效性", "背包倒序"], "分别记录换出和换入数量，使全局交换限制能在网格路径上局部转移。"),
+  createDpProblem("n79", "training", "HDU6289 - 寻宝游戏", "https://vjudge.net/problem/HDU-6289", "HDU", "6289", "困难", ["dp-linear", "dp-knapsack"], ["网格 DP", "换入换出", "消除后效性", "背包倒序"], "分别记录换出和换入数量，使全局交换限制能在网格路径上局部转移。"),
   createDpProblem("n80", "training", "CCPC Xiamen 2019 J - Zayin and Tree", "https://qoj.ac/problem/9110", "QOJ", "9110", "困难", ["dp-wrong-solutions", "dp-tree"], ["松弛", "错误复杂度分析", "错解改进", "树形 DP"], "复盘能通过但复杂度不优的松弛写法，并对照更稳健的树上 DP 改进。"),
   createDpProblem("n81", "training", "CCPC Liaoning 2024 H - 划分数字", "https://codeforces.com/gym/105481/problem/H", "GYM", "105481H", "困难", ["dp-digit"], ["数位 DP", "数字划分", "计数"], "只收整篇补题中的 H，按数位状态统计数字划分方案。"),
   createDpProblem("n82", "classic", "CF1778D - Flexible String Revisit", "https://codeforces.com/contest/1778/problem/D", "Codeforces", "1778D", "困难", ["dp-probability"], ["期望 DP", "距离状态", "手动高斯消元"], "递推式形成线性方程组，利用相邻状态关系手动消元求期望。")
@@ -155,7 +186,7 @@ const defaultDpProblems = [
     oj: "AtCoder",
     problemId: "ABC345 E",
     difficulty: "困难",
-    knowledge: ["dp-linear"],
+    knowledge: ["dp-linear", "dp-optimization"],
     techniques: ["最优与次优", "滚动 DP", "状态降维"],
     kind: "training",
     note: "每个删除次数只保留颜色不同的前两优值，避免状态按颜色扩张。"
@@ -187,7 +218,7 @@ const defaultDpProblems = [
   {
     id: "dp-t04-hdu6092",
     title: "HDU 6092 - Rikka with Subset",
-    url: "https://acm.hdu.edu.cn/showproblem.php?pid=6092",
+    url: "https://vjudge.net/problem/HDU-6092",
     oj: "HDU",
     problemId: "6092",
     difficulty: "中等",
@@ -293,91 +324,55 @@ const defaultDpProblems = [
     note: "对子集维护最大两项并做 SOS 转移，最后取前缀最大答案。"
   },
   {
-    id: "dp-digit-hdu3652",
-    title: "HDU 3652 - B-number",
-    url: "https://acm.hdu.edu.cn/showproblem.php?pid=3652",
-    oj: "HDU",
-    problemId: "3652",
-    difficulty: "中等",
-    knowledge: ["dp-digit"],
-    techniques: ["数位自动机", "余数状态", "前缀统计"],
-    kind: "classic",
-    note: "把是否出现 13 做成自动机状态，并同时维护模 13 的余数。"
-  },
-  {
-    id: "dp-digit-cf55-d",
-    title: "CF55D - Beautiful numbers",
-    url: "https://codeforces.com/contest/55/problem/D",
-    oj: "Codeforces",
-    problemId: "55D",
+    id: "dp-bitmask-jisuanke-42577",
+    title: "2019 ICPC 南昌区域赛 B - A Funny Bipartite Graph",
+    url: "https://vjudge.net/problem/%E8%AE%A1%E8%92%9C%E5%AE%A2-42577",
+    oj: "计蒜客",
+    problemId: "42577",
     difficulty: "困难",
-    knowledge: ["dp-digit"],
-    techniques: ["LCM 状态", "余数压缩", "记忆化搜索"],
-    kind: "classic",
-    note: "用非零数位的最小公倍数压缩整除条件，再做数位 DP。"
-  },
-  {
-    id: "dp-digit-probability-cf54-c",
-    title: "CF54C - First Digit Law",
-    url: "https://codeforces.com/contest/54/problem/C",
-    oj: "Codeforces",
-    problemId: "54C",
-    difficulty: "困难",
-    knowledge: ["dp-digit", "dp-probability"],
-    techniques: ["数位统计", "概率 DP", "Benford 定律"],
-    kind: "classic",
-    note: "先统计每个区间以 1 开头的概率，再做独立事件的计数 DP。"
-  },
-  {
-    id: "dp-digit-hdu4352",
-    title: "HDU 4352 - XHXJ's LIS",
-    url: "https://acm.hdu.edu.cn/showproblem.php?pid=4352",
-    oj: "HDU",
-    problemId: "4352",
-    difficulty: "困难",
-    knowledge: ["dp-digit", "dp-bitmask"],
-    techniques: ["LIS 状态", "按位压缩", "数位 DP"],
+    knowledge: ["dp-bitmask"],
+    techniques: ["二分图覆盖", "子集状态", "结构优化"],
     kind: "training",
-    note: "用耐心排序的掩码表示当前 LIS 状态，将序列信息塞进数位 DP。"
+    note: "利用左点只连接编号不小于自身的右点，以及选定左点集后的前缀覆盖性质，将搜索压成 O(n·2^n) 的状态压缩 DP。"
   },
   {
-    id: "dp-probability-cf167-b",
-    title: "CF167B - Wizards and Huge Prize",
-    url: "https://codeforces.com/contest/167/problem/B",
-    oj: "Codeforces",
-    problemId: "167B",
-    difficulty: "中等",
-    knowledge: ["dp-probability", "dp-knapsack"],
-    techniques: ["概率 DP", "容量状态", "独立事件"],
-    kind: "classic",
-    note: "以胜场数和背包剩余容量为状态，累加独立事件概率。"
-  },
-  {
-    id: "dp-probability-cf280-c",
-    title: "CF280C - Game on Tree",
-    url: "https://codeforces.com/contest/280/problem/C",
-    oj: "Codeforces",
-    problemId: "280C",
-    difficulty: "中等",
-    knowledge: ["dp-probability"],
-    techniques: ["期望线性性", "指示变量", "树上贡献"],
-    kind: "classic",
-    note: "把每个点被直接删除的指示变量拆开，用期望线性性按深度求和。"
-  },
-  {
-    id: "dp-probability-cf1540-b",
-    title: "CF1540B - Tree Array",
-    url: "https://codeforces.com/contest/1540/problem/B",
-    oj: "Codeforces",
-    problemId: "1540B",
+    id: "dp-wrong-gym104022-b",
+    title: "2020 ICPC 银川站 B - The Great Wall",
+    url: "https://codeforces.com/gym/104022/problem/B",
+    oj: "GYM",
+    problemId: "104022B",
     difficulty: "困难",
-    knowledge: ["dp-probability", "dp-tree"],
-    techniques: ["树上概率 DP", "点对贡献", "期望逆序对"],
+    knowledge: ["dp-linear", "dp-wrong-solutions"],
+    techniques: ["极差分解", "状态正确性", "复杂度核验", "小数据对拍"],
     kind: "training",
-    note: "枚举根与点对，在树上递推两点先后被加入的概率。"
+    note: "把每段极差拆成正负贡献后，朴素状态很容易漏掉合法顺序或误判复杂度；保留为错解复盘与对拍验证训练。"
+  },
+  {
+    id: "dp-optimization-gym102801-k",
+    title: "2020 ICPC 东北赛 K - PepperLa's Boast",
+    url: "https://codeforces.com/gym/102801/problem/K",
+    oj: "GYM",
+    problemId: "102801K",
+    difficulty: "困难",
+    knowledge: ["dp-optimization"],
+    techniques: ["二维单调队列", "滑动窗口最值", "网格 DP"],
+    kind: "classic",
+    note: "把二维窗口转移拆成行列两级单调队列，在线维护 k×k 范围内的最优状态，是二维单调队列优化 DP 的代表题。"
+  },
+  {
+    id: "dp-subset-nowcoder9328-g",
+    title: "2020 ICPC 小米邀请赛决赛 G - Rikka with Game Theory",
+    url: "https://ac.nowcoder.com/acm/contest/9328/G",
+    oj: "牛客",
+    problemId: "9328 G",
+    difficulty: "困难",
+    knowledge: ["dp-subset"],
+    techniques: ["状态降维", "分层构造", "无后效性", "MEX"],
+    kind: "classic",
+    note: "只记录已经放入若干层的点集；新的一层可以直接叠在其后，层数本身不影响后续合法转移，因此无需额外开一维记录当前层数。"
   },
   ...reviewedDpProblems
-];
+].filter((problem) => !REMOVED_PROBLEM_IDS.has(problem.id));
 
 const dpProblemRatings = [
   ["dp-c01-abc275-f", 1608, "AtCoder Problems"],
@@ -391,11 +386,6 @@ const dpProblemRatings = [
   ["dp-t10-cf11-d", 2200, "Codeforces"],
   ["dp-t11-cf1209-e2", 2500, "Codeforces"],
   ["dp-t12-arc100-e", 2111, "AtCoder Problems"],
-  ["dp-digit-cf55-d", 2500, "Codeforces"],
-  ["dp-digit-probability-cf54-c", 2000, "Codeforces"],
-  ["dp-probability-cf167-b", 1800, "Codeforces"],
-  ["dp-probability-cf280-c", 2200, "Codeforces"],
-  ["dp-probability-cf1540-b", 2300, "Codeforces"],
   ["dp-n01", 2028, "AtCoder Problems"],
   ["dp-n02", 2793, "AtCoder Problems"],
   ["dp-n03", 2100, "Codeforces"],
@@ -554,6 +544,7 @@ const ojStyles = {
   AtCoder: { short: "AT", color: "#4e5651", bg: "#eceeeb" },
   LeetCode: { short: "LC", color: "#9a670e", bg: "#f8efd7" },
   HDU: { short: "HD", color: "#3973a8", bg: "#e8f0f7" },
+  计蒜客: { short: "JS", color: "#8a5a2f", bg: "#f5eadf" },
   POJ: { short: "PO", color: "#4b8063", bg: "#e7f0eb" },
   QOJ: { short: "QO", color: "#9b4b5b", bg: "#f7e9ec" },
   GYM: { short: "GYM", color: "#b55a3f", bg: "#faebe5" },
@@ -569,7 +560,8 @@ const state = {
   route: "knowledge",
   topicId: "graph",
   query: "",
-  difficulty: "全部",
+  classicDifficulty: "全部",
+  trainingDifficulty: "全部",
   modalType: null,
   editingId: null,
   modalContext: {},
@@ -582,6 +574,8 @@ const cloud = {
   enabled: false,
   client: null,
   user: null,
+  isAdmin: false,
+  submissions: [],
   version: 0,
   updatedAt: null,
   status: "local",
@@ -604,11 +598,13 @@ const els = {
   contestContent: document.querySelector("#contestContent"),
   addButton: document.querySelector("#addButton"),
   addMenu: document.querySelector("#addMenu"),
+  sidebarAddButton: document.querySelector("#sidebarAddButton"),
   modalLayer: document.querySelector("#modalLayer"),
   modalTitle: document.querySelector("#modalTitle"),
   modalEyebrow: document.querySelector("#modalEyebrow"),
   formFields: document.querySelector("#formFields"),
   entryForm: document.querySelector("#entryForm"),
+  modalFooter: document.querySelector("#modalFooter"),
   submitButton: document.querySelector("#submitButton"),
   toast: document.querySelector("#toast"),
   toastText: document.querySelector("#toastText"),
@@ -726,6 +722,14 @@ function normalizedProblemSource(problem) {
 function mergeProblemRecord(target, incoming) {
   target.knowledge = [...new Set([...(target.knowledge || []), ...(incoming.knowledge || [])])];
   target.techniques = [...new Set([...(target.techniques || []), ...(incoming.techniques || [])])];
+  const solutionKeys = new Set((target.solutions || []).map((solution) => solution.submissionId || normalizedProblemUrl(solution.url)));
+  target.solutions = [...(target.solutions || [])];
+  for (const solution of incoming.solutions || []) {
+    const key = solution.submissionId || normalizedProblemUrl(solution.url);
+    if (key && solutionKeys.has(key)) continue;
+    target.solutions.push(solution);
+    if (key) solutionKeys.add(key);
+  }
   for (const field of ["title", "url", "oj", "problemId", "difficulty", "kind", "note", "rating", "ratingLabel", "ratingSource"]) {
     if ((target[field] === undefined || target[field] === null || target[field] === "") && incoming[field] !== undefined) {
       target[field] = incoming[field];
@@ -760,7 +764,11 @@ function mergeDuplicateProblems(problems) {
 function migrateCatalog(data) {
   const migrated = structuredClone(data);
   migrated.problems = Array.isArray(migrated.problems)
-    ? migrated.problems.filter((problem) => !PRESET_PROBLEM_IDS.has(problem.id))
+    ? migrated.problems.filter((problem) => (
+      !PRESET_PROBLEM_IDS.has(problem.id)
+      && !REMOVED_PROBLEM_IDS.has(problem.id)
+      && !REMOVED_PROBLEM_SOURCES.has(normalizedProblemSource(problem))
+    ))
     : [];
   migrated.contests = Array.isArray(migrated.contests)
     ? migrated.contests.filter((contest) => !PRESET_CONTEST_IDS.has(contest.id))
@@ -774,39 +782,30 @@ function migrateCatalog(data) {
   migrated.problems = migrated.problems.map((problem) => ({
     ...problem,
     knowledge: Array.isArray(problem.knowledge) ? problem.knowledge : [],
-    techniques: Array.isArray(problem.techniques) ? problem.techniques : []
+    techniques: Array.isArray(problem.techniques) ? problem.techniques : [],
+    solutions: Array.isArray(problem.solutions) ? problem.solutions : []
   }));
 
   const topicIdAliases = new Map();
   for (const defaultTopic of [...defaultDpSubtopics, ...defaultDpCustomTopics]) {
+    const expectedParentId = topicIdAliases.get(defaultTopic.parentId) || defaultTopic.parentId;
     const existing = migrated.topics.find((topic) => (
       topic.id === defaultTopic.id
-      || (topic.parentId === defaultTopic.parentId && normalizedCatalogName(topic.name) === normalizedCatalogName(defaultTopic.name))
+      || (topic.parentId === expectedParentId && normalizedCatalogName(topic.name) === normalizedCatalogName(defaultTopic.name))
     ));
     if (!existing) {
       const added = structuredClone(defaultTopic);
+      added.parentId = expectedParentId;
       migrated.topics.push(added);
       topicIdAliases.set(defaultTopic.id, added.id);
       continue;
     }
     topicIdAliases.set(defaultTopic.id, existing.id);
+    existing.parentId = expectedParentId;
     existing.description ||= defaultTopic.description;
     existing.color ||= defaultTopic.color;
     existing.group ||= defaultTopic.group;
     existing.article ||= structuredClone(defaultTopic.article);
-  }
-
-  const wrongSolutionsId = topicIdAliases.get("dp-wrong-solutions") || "dp-wrong-solutions";
-  const redundantOptimizationIds = new Set(migrated.topics
-    .filter((topic) => topic.parentId === "dp"
-      && topic.id !== wrongSolutionsId
-      && ["dp优化", "dp优化松弛"].includes(normalizedCatalogName(topic.name)))
-    .map((topic) => topic.id));
-  if (redundantOptimizationIds.size) {
-    for (const problem of migrated.problems) {
-      problem.knowledge = [...new Set(problem.knowledge.map((id) => redundantOptimizationIds.has(id) ? wrongSolutionsId : id))];
-    }
-    migrated.topics = migrated.topics.filter((topic) => !redundantOptimizationIds.has(topic.id));
   }
 
   migrated.problems = mergeDuplicateProblems(migrated.problems);
@@ -832,6 +831,50 @@ function migrateCatalog(data) {
     }
   }
   migrated.problems = mergeDuplicateProblems(migrated.problems);
+
+  const wrongSolutionsId = topicIdAliases.get("dp-wrong-solutions") || "dp-wrong-solutions";
+  const optimizationId = topicIdAliases.get("dp-optimization") || "dp-optimization";
+  const subsetId = topicIdAliases.get("dp-subset") || "dp-subset";
+  const sosId = topicIdAliases.get("dp-sos") || "dp-sos";
+  const bitmaskId = topicIdAliases.get("dp-bitmask") || "dp-bitmask";
+  for (const problem of migrated.problems) {
+    if (problem.knowledge.includes(subsetId) || problem.knowledge.includes(sosId)) {
+      problem.knowledge = problem.knowledge.filter((id) => id !== bitmaskId);
+    }
+  }
+
+  const colorfulSubsequence = migrated.problems.find((problem) => (
+    problem.id === "dp-t01-abc345-e"
+    || normalizedProblemUrl(problem.url) === "atcoder:abc345_e"
+  ));
+  if (colorfulSubsequence) {
+    colorfulSubsequence.knowledge = [...new Set([
+      ...colorfulSubsequence.knowledge.filter((id) => id !== wrongSolutionsId),
+      optimizationId
+    ])];
+  }
+
+  const funnyBipartiteDefault = defaultDpProblems.find((problem) => problem.id === "dp-bitmask-jisuanke-42577");
+  const funnyBipartite = migrated.problems.find((problem) => normalizedProblemSource(problem) === "计蒜客:42577");
+  if (funnyBipartiteDefault && funnyBipartite) {
+    const solutions = funnyBipartite.solutions || [];
+    Object.assign(funnyBipartite, structuredClone(funnyBipartiteDefault), { solutions });
+  }
+
+  for (const problem of migrated.problems) {
+    const oj = normalizedCatalogName(problem.oj);
+    const problemId = String(problem.problemId || "").trim();
+    if (oj === "hdu" && /^\d+$/.test(problemId)) {
+      problem.url = `https://vjudge.net/problem/HDU-${problemId}`;
+    }
+    const fzuProblem = problemId.match(/^FZU\s*-?(\d+)$/i);
+    if (fzuProblem) problem.url = `https://vjudge.net/problem/FZU-${fzuProblem[1]}`;
+  }
+
+  migrated.problems = mergeDuplicateProblems(migrated.problems).filter((problem) => (
+    !REMOVED_PROBLEM_IDS.has(problem.id)
+    && !REMOVED_PROBLEM_SOURCES.has(normalizedProblemSource(problem))
+  ));
   migrated.schemaVersion = CATALOG_SCHEMA_VERSION;
   return migrated;
 }
@@ -886,7 +929,7 @@ async function writeRemoteCatalog(data, expectedVersion) {
 async function saveData() {
   cacheData();
   if (!cloud.enabled) return;
-  if (!cloud.user) throw new Error("请先登录管理员账号");
+  if (!cloud.user || !cloud.isAdmin) throw new Error("当前账号没有管理员权限");
 
   const snapshot = structuredClone(state.data);
   setPendingSync(snapshot, cloud.version);
@@ -937,7 +980,7 @@ async function loadRemoteData({ silent = false } = {}) {
     cloud.version = remote?.version || 0;
     cloud.updatedAt = remote?.updated_at || null;
 
-    if (cloud.user && pending.expectedVersion === cloud.version) {
+    if (cloud.isAdmin && pending.expectedVersion === cloud.version) {
       try {
         const saved = await writeRemoteCatalog(state.data, pending.expectedVersion);
         cloud.version = saved.version;
@@ -951,20 +994,20 @@ async function loadRemoteData({ silent = false } = {}) {
         cloud.error = error.message || "待同步修改上传失败";
       }
     } else {
-      cloud.status = pending.expectedVersion === cloud.version ? (cloud.user ? "offline" : "readonly") : "conflict";
+      cloud.status = pending.expectedVersion === cloud.version ? (cloud.isAdmin ? "offline" : "readonly") : "conflict";
     }
   } else if (remote && validateCatalog(remote.data)) {
     state.data = migrateCatalog(remote.data);
     stripSharedProgress(state.data);
     cloud.version = remote.version;
     cloud.updatedAt = remote.updated_at;
-    cloud.status = cloud.user ? "synced" : "readonly";
+    cloud.status = cloud.isAdmin ? "synced" : "readonly";
     cloud.error = "";
     cacheData();
   } else {
     cloud.version = 0;
     cloud.updatedAt = null;
-    cloud.status = cloud.user ? "synced" : "readonly";
+    cloud.status = cloud.isAdmin ? "synced" : "readonly";
   }
 
   if (!state.data.topics.some((topic) => topic.id === state.topicId)) state.topicId = state.data.topics[0].id;
@@ -993,7 +1036,7 @@ function subscribeToRemoteCatalog() {
         stripSharedProgress(state.data);
         cloud.version = next.version;
         cloud.updatedAt = next.updated_at;
-        cloud.status = cloud.user ? "synced" : "readonly";
+        cloud.status = cloud.isAdmin ? "synced" : "readonly";
         cacheData();
         render();
         showToast("已同步另一端的更新");
@@ -1011,6 +1054,7 @@ async function initializeCloud() {
     renderSyncStatus();
     return;
   }
+  cloud.enabled = true;
   if (!window.supabase?.createClient) {
     cloud.status = "offline";
     cloud.error = "Supabase 客户端未加载";
@@ -1018,24 +1062,37 @@ async function initializeCloud() {
     return;
   }
 
-  cloud.enabled = true;
   cloud.status = "loading";
   cloud.client = window.supabase.createClient(url, key, {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
   });
   renderSyncStatus();
+  renderAccessControls();
+  renderIcons();
 
   const sessionResult = await cloud.client.auth.getSession();
   cloud.user = sessionResult.data.session?.user || null;
+  await refreshAdminAccess();
   cloud.client.auth.onAuthStateChange((_event, session) => {
     const previousUser = cloud.user?.id;
     cloud.user = session?.user || null;
-    if (cloud.user?.id !== previousUser) loadRemoteData({ silent: true });
-    else renderSyncStatus();
+    cloud.isAdmin = false;
+    setTimeout(async () => {
+      await refreshAdminAccess();
+      if (cloud.user?.id !== previousUser) await loadRemoteData({ silent: true });
+      else render();
+    }, 0);
   });
 
   await loadRemoteData({ silent: true });
   subscribeToRemoteCatalog();
+}
+
+async function refreshAdminAccess() {
+  cloud.isAdmin = false;
+  if (!cloud.enabled || !cloud.user) return;
+  const result = await cloud.client.rpc("is_catalog_admin");
+  if (!result.error) cloud.isAdmin = result.data === true;
 }
 
 function escapeHtml(value = "") {
@@ -1067,8 +1124,28 @@ function getParentTopic(topic) {
   return topic?.parentId ? state.data.topics.find((item) => item.id === topic.parentId) : null;
 }
 
+function getTopicPath(topicOrId) {
+  const path = [];
+  let topic = typeof topicOrId === "string" ? getTopic(topicOrId) : topicOrId;
+  const seen = new Set();
+  while (topic && !seen.has(topic.id)) {
+    path.unshift(topic);
+    seen.add(topic.id);
+    topic = getParentTopic(topic);
+  }
+  return path;
+}
+
+function getTopicDisplayName(id) {
+  const path = getTopicPath(id);
+  if (path.length >= 3) return `${path.at(-2).name} / ${path.at(-1).name}`;
+  return path.at(-1)?.name || id;
+}
+
 function getTopicScopeIds(topicId) {
-  return [topicId, ...getChildTopics(topicId).map((topic) => topic.id)];
+  const ids = [topicId];
+  for (const child of getChildTopics(topicId)) ids.push(...getTopicScopeIds(child.id));
+  return ids;
 }
 
 function problemBelongsToTopic(problem, topicId) {
@@ -1078,6 +1155,15 @@ function problemBelongsToTopic(problem, topicId) {
 
 function getTopicProblemCount(topicId) {
   return state.data.problems.filter((problem) => problemBelongsToTopic(problem, topicId)).length;
+}
+
+function normalizeKnowledgeSelection(ids) {
+  const unique = [...new Set(ids)].filter((id) => state.data.topics.some((topic) => topic.id === id));
+  return unique.filter((id) => !unique.some((otherId) => otherId !== id && getTopicScopeIds(id).includes(otherId)));
+}
+
+function canAdminEdit() {
+  return !cloud.enabled || cloud.isAdmin;
 }
 
 function getOjStyle(oj) {
@@ -1101,7 +1187,7 @@ function renderSyncStatus() {
   const statuses = {
     local: { label: "本地模式", icon: "hard-drive", title: "尚未配置云端数据库" },
     loading: { label: "正在同步", icon: "loader-circle", title: "正在读取云端数据" },
-    readonly: { label: "云端只读", icon: "cloud", title: "已连接数据库，登录后可以修改" },
+    readonly: { label: "游客只读", icon: "cloud", title: "游客可以浏览和投稿，只有管理员可以编辑" },
     synced: { label: "已同步", icon: "cloud-check", title: `云端版本 ${cloud.version}` },
     saving: { label: "正在保存", icon: "cloud-upload", title: "正在写入云端数据库" },
     offline: { label: "离线副本", icon: "cloud-off", title: cloud.error || "云端暂时不可用，本机修改会保留" },
@@ -1117,6 +1203,7 @@ function renderSyncStatus() {
 function render() {
   renderSidebar();
   renderTopbar();
+  renderAccessControls();
   if (state.route === "knowledge") renderKnowledge();
   else renderContests();
   renderIcons();
@@ -1141,8 +1228,8 @@ function renderSidebar() {
           </div>
           ${children.length ? `
             <div class="topic-children ${expanded ? "is-expanded" : ""}">
-              ${standardChildren.map(renderSidebarChild).join("")}
-              ${customChildren.length ? `<span class="topic-child-label">我的专题</span>${customChildren.map(renderSidebarChild).join("")}` : ""}
+              ${standardChildren.map((child) => renderSidebarChild(child, 1)).join("")}
+              ${customChildren.length ? `<span class="topic-child-label">我的专题</span>${customChildren.map((child) => renderSidebarChild(child, 1)).join("")}` : ""}
             </div>` : ""}
         </div>`;
     })
@@ -1159,26 +1246,53 @@ function renderSidebar() {
   els.weeklyProgressBar.style.width = `${training.length ? (done / training.length) * 100 : 0}%`;
 }
 
-function renderSidebarChild(topic) {
+function renderSidebarChild(topic, depth) {
+  const children = getChildTopics(topic.id);
+  const expanded = children.length && state.expandedTopics.has(topic.id);
   return `
-    <button class="topic-nav-item topic-nav-child ${state.topicId === topic.id && state.route === "knowledge" ? "is-active" : ""}" data-topic="${topic.id}">
-      <span class="topic-branch" aria-hidden="true"></span>
-      <span>${escapeHtml(topic.name)}</span>
-      ${topic.group === "custom" ? `<i class="custom-topic-icon" data-lucide="sparkles" aria-label="我的专题"></i>` : ""}
-      <span class="topic-count">${getTopicProblemCount(topic.id)}</span>
-    </button>`;
+    <div class="topic-tree-node topic-tree-child" style="--topic-depth:${depth}">
+      <div class="topic-nav-row">
+        <button class="topic-nav-item topic-nav-child ${state.topicId === topic.id && state.route === "knowledge" ? "is-active" : ""}" data-topic="${topic.id}">
+          <span class="topic-branch" aria-hidden="true"></span>
+          <span>${escapeHtml(topic.name)}</span>
+          ${topic.group === "custom" ? `<i class="custom-topic-icon" data-lucide="sparkles" aria-label="我的专题"></i>` : ""}
+          <span class="topic-count">${getTopicProblemCount(topic.id)}</span>
+        </button>
+        ${children.length ? `<button class="topic-expand ${expanded ? "is-expanded" : ""}" data-toggle-topic="${topic.id}" aria-label="${expanded ? "收起" : "展开"}${escapeHtml(topic.name)}子专题" title="${expanded ? "收起子专题" : "展开子专题"}"><i data-lucide="chevron-right"></i></button>` : ""}
+      </div>
+      ${children.length ? `<div class="topic-children topic-children-nested ${expanded ? "is-expanded" : ""}">${children.map((child) => renderSidebarChild(child, depth + 1)).join("")}</div>` : ""}
+    </div>`;
 }
 
 function renderTopbar() {
   const topic = getTopic(state.topicId);
-  const parent = getParentTopic(topic);
+  const path = getTopicPath(topic);
   els.breadcrumb.innerHTML = state.route === "knowledge"
-    ? `<span>知识点题单</span><i data-lucide="chevron-right"></i>${parent ? `<span>${escapeHtml(parent.name)}</span><i data-lucide="chevron-right"></i>` : ""}<strong>${escapeHtml(topic.name)}</strong>`
+    ? `<span>知识点题单</span><i data-lucide="chevron-right"></i>${path.slice(0, -1).map((item) => `<span>${escapeHtml(item.name)}</span><i data-lucide="chevron-right"></i>`).join("")}<strong>${escapeHtml(topic.name)}</strong>`
     : `<span>题径</span><i data-lucide="chevron-right"></i><strong>比赛收藏</strong>`;
   els.globalSearch.placeholder = state.route === "knowledge" ? "搜索题目、OJ 或标签" : "搜索比赛、OJ 或标签";
   els.knowledgeView.hidden = state.route !== "knowledge";
   els.contestView.hidden = state.route !== "contests";
   renderSyncStatus();
+}
+
+function renderAccessControls() {
+  const admin = canAdminEdit();
+  els.sidebarAddButton.hidden = !admin;
+  if (admin) {
+    els.addButton.innerHTML = `<i data-lucide="plus"></i><span>新建</span><i data-lucide="chevron-down" class="chevron"></i>`;
+    els.addMenu.innerHTML = `
+      <button role="menuitem" data-add="problem"><i data-lucide="file-plus-2"></i><span><strong>题目</strong><small>收录来自任意 OJ 的题目</small></span></button>
+      <button role="menuitem" data-add="article"><i data-lucide="notebook-pen"></i><span><strong>教学内容</strong><small>补充讲解、思路或笔记</small></span></button>
+      <button role="menuitem" data-add="contest"><i data-lucide="trophy"></i><span><strong>比赛</strong><small>收藏一场值得回看的比赛</small></span></button>
+      <button role="menuitem" data-add="topic"><i data-lucide="tags"></i><span><strong>知识点 / 子专题</strong><small>扩展层级或整理自定义专题</small></span></button>
+      ${cloud.enabled && cloud.isAdmin ? `<button role="menuitem" data-review-submissions><i data-lucide="inbox"></i><span><strong>投稿审核</strong><small>审核游客提交的题目与题解</small></span></button>` : ""}`;
+  } else {
+    els.addButton.innerHTML = `<i data-lucide="send"></i><span>投稿</span><i data-lucide="chevron-down" class="chevron"></i>`;
+    els.addMenu.innerHTML = `
+      <button role="menuitem" data-submit-entry="submit-problem"><i data-lucide="file-plus-2"></i><span><strong>投稿题目</strong><small>推荐一道值得收录的题</small></span></button>
+      <button role="menuitem" data-submit-entry="submit-solution"><i data-lucide="notebook-pen"></i><span><strong>投稿题解</strong><small>为已有题目补充题解链接</small></span></button>`;
+  }
 }
 
 function matchesQuery(problem) {
@@ -1189,7 +1303,7 @@ function matchesQuery(problem) {
 }
 
 function renderTags(ids, max = ids.length) {
-  return ids.slice(0, max).map((id) => `<span class="tag">${escapeHtml(getTopicName(id))}</span>`).join("");
+  return ids.slice(0, max).map((id) => `<span class="tag">${escapeHtml(getTopicDisplayName(id))}</span>`).join("");
 }
 
 function renderTechniqueTags(tags = [], max = tags.length) {
@@ -1218,6 +1332,7 @@ function renderRatingDisclosure(problem) {
 }
 
 function renderEntryActions(type, id, label) {
+  if (!canAdminEdit()) return "";
   return `
     <div class="entry-actions">
       <button class="entry-action" data-edit="${type}" data-entry-id="${escapeHtml(id)}" aria-label="编辑${escapeHtml(label)}" title="编辑">
@@ -1227,6 +1342,25 @@ function renderEntryActions(type, id, label) {
         <i data-lucide="trash-2"></i>
       </button>
     </div>`;
+}
+
+function problemDisplayUrl(problem) {
+  if (problem.oj !== "GYM") return problem.url;
+  try {
+    const url = new URL(problem.url);
+    const match = url.pathname.match(/^\/gym\/(\d+)/) || url.pathname.match(/^\/problemset\/gymProblem\/(\d+)/);
+    return match ? `https://codeforces.com/gym/${match[1]}` : problem.url;
+  } catch {
+    return problem.url;
+  }
+}
+
+function renderSolutionLinks(problem) {
+  if (!problem.solutions?.length) return "";
+  return `<div class="solution-links">${problem.solutions.map((solution) => `
+    <a href="${escapeHtml(solution.url)}" target="_blank" rel="noreferrer" title="${escapeHtml(solution.summary || solution.title || "查看题解")}">
+      <i data-lucide="notebook-text"></i>${escapeHtml(solution.title || "题解")}
+    </a>`).join("")}</div>`;
 }
 
 function renderProblemCard(problem) {
@@ -1259,7 +1393,7 @@ function renderSubtopicOverview(topic) {
     <div class="subtopic-group">
       <div class="subtopic-group-heading">
         <div><h3>${title}</h3><p>${description}</p></div>
-        ${group === "custom" ? `<button class="text-button" data-add="topic" data-parent-id="${topic.id}" data-topic-group="custom"><i data-lucide="plus"></i>添加我的专题</button>` : ""}
+        ${group === "custom" && canAdminEdit() ? `<button class="text-button" data-add="topic" data-parent-id="${topic.id}" data-topic-group="custom"><i data-lucide="plus"></i>添加我的专题</button>` : ""}
       </div>
       ${items.length ? `<div class="subtopic-grid">${items.map((child) => `
         <button class="subtopic-card" data-topic="${child.id}">
@@ -1280,13 +1414,44 @@ function renderSubtopicOverview(topic) {
     </section>`;
 }
 
+function renderProblemTable(problems, { scope, showProgress }) {
+  const filterKey = scope === "classic" ? "classicDifficulty" : "trainingDifficulty";
+  const filtered = problems.filter((problem) => state[filterKey] === "全部" || problem.difficulty === state[filterKey]);
+  const showActions = canAdminEdit();
+  const columnCount = 4 + (showProgress ? 1 : 0) + (showActions ? 1 : 0);
+  const emptyTitle = scope === "classic" ? "暂无匹配的经典例题" : "暂无匹配的训练题";
+  return `
+    <div class="training-panel problem-panel">
+      <div class="training-toolbar">
+        <div class="filter-group">
+          ${["全部", "简单", "中等", "困难"].map((item) => `<button class="filter-button ${state[filterKey] === item ? "is-active" : ""}" data-difficulty="${item}" data-difficulty-scope="${scope}">${item}</button>`).join("")}
+        </div>
+        <span class="training-count">${filtered.length} problems</span>
+      </div>
+      ${filtered.length ? `
+        <table class="problem-table ${showProgress ? "is-training" : "is-classic"}">
+          <thead><tr>${showProgress ? "<th>状态</th>" : ""}<th>题目</th><th>难度</th><th class="knowledge-column">知识点</th><th>备注</th>${showActions ? "<th class=\"actions-column\"><span class=\"sr-only\">操作</span></th>" : ""}</tr></thead>
+          <tbody>
+            ${filtered.map((problem) => `
+              <tr>
+                ${showProgress ? `<td><button class="status-check ${isProblemDone(problem) ? "is-done" : ""}" data-toggle-done="${problem.id}" aria-label="${isProblemDone(problem) ? "标记为未完成" : "标记为已完成"}" title="${isProblemDone(problem) ? "已完成" : "未完成"}"><i data-lucide="check"></i></button></td>` : ""}
+                <td><div class="table-title">${ojMark(problem.oj)}<div><a href="${escapeHtml(problemDisplayUrl(problem))}" target="_blank" rel="noreferrer">${escapeHtml(problem.title)}</a><div class="problem-id">${escapeHtml(problem.problemId || problem.oj)}</div></div></div></td>
+                <td><div class="difficulty-cell"><span class="difficulty ${difficultyClass(problem.difficulty)}">${escapeHtml(problem.difficulty)}</span>${renderRatingDisclosure(problem)}</div></td>
+                <td class="knowledge-column"><div class="table-tags">${renderTags(problem.knowledge)}</div></td>
+                <td class="table-note"><div class="table-note-copy">${escapeHtml(problem.note || "")}</div>${problem.techniques?.length ? `<div class="table-techniques">${renderTechniqueTags(problem.techniques)}</div>` : ""}${renderSolutionLinks(problem)}</td>
+                ${showActions ? `<td class="table-actions">${renderEntryActions("problem", problem.id, problem.title)}</td>` : ""}
+              </tr>`).join("")}
+          </tbody>
+        </table>` : `<div class="table-empty" style="--table-columns:${columnCount}">${renderEmpty(emptyTitle, "试试切换难度或更换搜索词。")}</div>`}
+    </div>`;
+}
+
 function renderKnowledge() {
   const topic = getTopic(state.topicId);
   const parent = getParentTopic(topic);
   const topicProblems = state.data.problems.filter((problem) => problemBelongsToTopic(problem, topic.id) && matchesQuery(problem));
   const classics = topicProblems.filter((problem) => problem.kind === "classic");
   const training = topicProblems.filter((problem) => problem.kind === "training");
-  const filteredTraining = training.filter((problem) => state.difficulty === "全部" || problem.difficulty === state.difficulty);
   const doneCount = topicProblems.filter(isProblemDone).length;
   const article = topic.article || { title: `${topic.name}学习笔记`, body: ["这里还没有教学内容。"], outline: ["补充知识梳理", "添加经典例题", "安排实战训练"] };
 
@@ -1297,7 +1462,7 @@ function renderKnowledge() {
           <div class="topic-kicker-row">
             <div class="topic-kicker"><span class="topic-dot" style="--topic-color:${topic.color}"></span>${topic.group === "custom" ? "MY TOPIC" : parent ? "SUBTOPIC" : "KNOWLEDGE PATH"}</div>
             <div class="topic-heading-actions">
-              ${!parent ? `<button class="entry-action" data-add="topic" data-parent-id="${topic.id}" data-topic-group="custom" aria-label="在${escapeHtml(topic.name)}下新增子专题" title="新增子专题"><i data-lucide="folder-plus"></i></button>` : ""}
+              ${!parent && canAdminEdit() ? `<button class="entry-action" data-add="topic" data-parent-id="${topic.id}" data-topic-group="custom" aria-label="在${escapeHtml(topic.name)}下新增子专题" title="新增子专题"><i data-lucide="folder-plus"></i></button>` : ""}
               ${renderEntryActions("topic", topic.id, topic.name)}
             </div>
           </div>
@@ -1320,7 +1485,7 @@ function renderKnowledge() {
       <section class="section">
         <div class="section-heading">
           <div><h2>知识导读</h2><p>先建立框架，再进入题目。</p></div>
-          <button class="text-button" data-add="article"><i data-lucide="pencil-line"></i>编辑内容</button>
+          ${canAdminEdit() ? `<button class="text-button" data-add="article"><i data-lucide="pencil-line"></i>编辑内容</button>` : ""}
         </div>
         <div class="lesson-layout">
           <article class="lesson-article">
@@ -1343,39 +1508,17 @@ function renderKnowledge() {
       <section class="section">
         <div class="section-heading">
           <div><h2>经典例题</h2><p>用少量代表题掌握核心模型。</p></div>
-          <button class="text-button" data-add="problem" data-kind="classic"><i data-lucide="plus"></i>添加例题</button>
+          ${canAdminEdit() ? `<button class="text-button" data-add="problem" data-kind="classic"><i data-lucide="plus"></i>添加例题</button>` : ""}
         </div>
-        ${classics.length ? `<div class="example-grid">${classics.map(renderProblemCard).join("")}</div>` : renderEmpty("暂无匹配的经典例题", "可以调整搜索词，或收录一道新题。")}
+        ${renderProblemTable(classics, { scope: "classic", showProgress: false })}
       </section>
 
       <section class="section">
         <div class="section-heading">
           <div><h2>实战训练</h2><p>完成后点亮状态，保留自己的练习节奏。</p></div>
-          <button class="text-button" data-add="problem" data-kind="training"><i data-lucide="plus"></i>添加训练</button>
+          ${canAdminEdit() ? `<button class="text-button" data-add="problem" data-kind="training"><i data-lucide="plus"></i>添加训练</button>` : ""}
         </div>
-        <div class="training-panel">
-          <div class="training-toolbar">
-            <div class="filter-group">
-              ${["全部", "简单", "中等", "困难"].map((item) => `<button class="filter-button ${state.difficulty === item ? "is-active" : ""}" data-difficulty="${item}">${item}</button>`).join("")}
-            </div>
-            <span class="training-count">${filteredTraining.length} problems</span>
-          </div>
-          ${filteredTraining.length ? `
-            <table class="problem-table">
-              <thead><tr><th>状态</th><th>题目</th><th>难度</th><th>知识点</th><th>备注</th><th><span class="sr-only">操作</span></th></tr></thead>
-              <tbody>
-                ${filteredTraining.map((problem) => `
-                  <tr>
-                    <td><button class="status-check ${isProblemDone(problem) ? "is-done" : ""}" data-toggle-done="${problem.id}" aria-label="${isProblemDone(problem) ? "标记为未完成" : "标记为已完成"}" title="${isProblemDone(problem) ? "已完成" : "未完成"}"><i data-lucide="check"></i></button></td>
-                    <td><div class="table-title">${ojMark(problem.oj)}<div><a href="${escapeHtml(problem.url)}" target="_blank" rel="noreferrer">${escapeHtml(problem.title)}</a><div class="problem-id">${escapeHtml(problem.problemId || problem.oj)}</div></div></div></td>
-                    <td><div class="difficulty-cell"><span class="difficulty ${difficultyClass(problem.difficulty)}">${escapeHtml(problem.difficulty)}</span>${renderRatingDisclosure(problem)}</div></td>
-                    <td><div class="table-tags">${renderTags(problem.knowledge, 2)}</div></td>
-                    <td class="problem-note">${problem.note ? `<span>${escapeHtml(problem.note)}</span>` : ""}${problem.techniques?.length ? `<div class="table-techniques">${renderTechniqueTags(problem.techniques, 2)}</div>` : ""}</td>
-                    <td class="table-actions">${renderEntryActions("problem", problem.id, problem.title)}</td>
-                  </tr>`).join("")}
-              </tbody>
-            </table>` : renderEmpty("暂无匹配的训练题", "试试切换难度或更换搜索词。")}
-        </div>
+        ${renderProblemTable(training, { scope: "training", showProgress: true })}
       </section>
     </div>`;
 }
@@ -1432,7 +1575,7 @@ function renderContests() {
         </div>
         <div class="contest-header-side">
           <div class="contest-summary"><strong>${contests.length}</strong><span>场比赛</span></div>
-          <button class="text-button" data-add="contest"><i data-lucide="plus"></i>添加比赛</button>
+          ${canAdminEdit() ? `<button class="text-button" data-add="contest"><i data-lucide="plus"></i>添加比赛</button>` : ""}
         </div>
       </header>
 
@@ -1458,7 +1601,7 @@ function renderContests() {
         <section class="section">
           <div class="section-heading">
             <div><h2>全部比赛</h2><p>按自己的节奏回看与训练。</p></div>
-            <button class="text-button" data-add="contest"><i data-lucide="plus"></i>添加比赛</button>
+            ${canAdminEdit() ? `<button class="text-button" data-add="contest"><i data-lucide="plus"></i>添加比赛</button>` : ""}
           </div>
           <div class="contest-grid">${rest.map(renderContestCard).join("")}</div>
         </section>` : ""}
@@ -1490,8 +1633,7 @@ function closeSidebar() {
 
 function topicOptions(selected = state.topicId) {
   return state.data.topics.map((topic) => {
-    const parent = getParentTopic(topic);
-    const label = parent ? `${parent.name} / ${topic.name}` : topic.name;
+    const label = getTopicPath(topic).map((item) => item.name).join(" / ");
     return `<option value="${topic.id}" ${topic.id === selected ? "selected" : ""}>${escapeHtml(label)}</option>`;
   }).join("");
 }
@@ -1500,7 +1642,7 @@ function topicCheckboxes(selectedIds = [state.topicId]) {
   const selected = new Set(selectedIds);
   return state.data.topics.map((topic) => {
     const parent = getParentTopic(topic);
-    const label = parent ? `${parent.name} / ${topic.name}` : topic.name;
+    const label = getTopicPath(topic).map((item) => item.name).join(" / ");
     return `
       <label class="checkbox-option ${parent ? "is-subtopic" : ""}">
         <input type="checkbox" name="knowledge" value="${topic.id}" ${selected.has(topic.id) ? "checked" : ""} />
@@ -1522,13 +1664,17 @@ function openModal(type, itemId = null, context = {}) {
     article: { eyebrow: "LESSON", title: "编辑教学内容", button: "保存内容" },
     delete: { eyebrow: "DELETE", title: "确认删除", button: "确认删除" },
     login: { eyebrow: "CLOUD", title: "管理员登录", button: "发送登录链接" },
-    account: { eyebrow: "SYNC", title: "云端同步", button: "退出登录" }
+    account: { eyebrow: "SYNC", title: "账号与同步", button: "退出登录" },
+    "submit-problem": { eyebrow: "SUBMISSION", title: "投稿题目", button: "提交审核" },
+    "submit-solution": { eyebrow: "SUBMISSION", title: "投稿题解", button: "提交审核" },
+    "review-submissions": { eyebrow: "REVIEW", title: "投稿审核", button: "" }
   };
   const config = configs[type];
   els.modalEyebrow.textContent = config.eyebrow;
   els.modalTitle.textContent = config.title;
   els.submitButton.textContent = config.button;
   els.submitButton.classList.toggle("danger-button", type === "delete");
+  els.modalFooter.hidden = type === "review-submissions";
   els.formFields.innerHTML = getFormFields(type);
   els.modalLayer.hidden = false;
   document.body.style.overflow = "hidden";
@@ -1552,8 +1698,42 @@ function getFormFields(type) {
   if (type === "account") {
     const pending = getPendingSync();
     return `
-      <div class="account-summary"><strong>${escapeHtml(cloud.user?.email || "已登录")}</strong><span>云端版本 ${cloud.version}${cloud.updatedAt ? ` · ${new Date(cloud.updatedAt).toLocaleString("zh-CN")}` : ""}</span></div>
+      <div class="account-summary"><strong>${escapeHtml(cloud.user?.email || "已登录")}</strong><span>${cloud.isAdmin ? "管理员" : "普通账号 · 只读"} · 云端版本 ${cloud.version}${cloud.updatedAt ? ` · ${new Date(cloud.updatedAt).toLocaleString("zh-CN")}` : ""}</span></div>
       ${pending ? `<div class="account-summary"><strong>本机有待同步修改</strong><span>${escapeHtml(pending.savedAt || "")}</span></div>` : ""}`;
+  }
+  if (type === "submit-problem") {
+    return `
+      <div class="submission-notice"><i data-lucide="shield-check"></i><span>投稿不会直接进入题单，管理员审核通过后才会公开。</span></div>
+      <label class="field"><span>题目名称</span><input name="title" required maxlength="160" placeholder="比赛与题号 - 题目名称" /></label>
+      <label class="field"><span>官方题目链接</span><input name="url" type="url" required maxlength="500" placeholder="https://..." /></label>
+      <div class="form-row">
+        <label class="field"><span>来源 OJ</span><input name="oj" required maxlength="40" list="ojList" placeholder="AtCoder / Codeforces / 牛客" /><datalist id="ojList">${Object.keys(ojStyles).map((oj) => `<option value="${oj}"></option>`).join("")}</datalist></label>
+        <label class="field"><span>题号</span><input name="problemId" maxlength="60" placeholder="ABC345 E" /></label>
+      </div>
+      <div class="form-row">
+        <label class="field"><span>建议难度</span><select name="difficulty">${["简单", "中等", "困难"].map((item) => `<option>${item}</option>`).join("")}</select></label>
+        <fieldset class="field"><legend>建议区域</legend><div class="radio-row"><label class="radio-option"><input type="radio" name="kind" value="classic" />经典例题</label><label class="radio-option"><input type="radio" name="kind" value="training" checked />实战训练</label></div></fieldset>
+      </div>
+      <fieldset class="field"><legend>知识点（可多选）</legend><div class="checkbox-grid">${topicCheckboxes([state.topicId])}</div></fieldset>
+      <label class="field"><span>技巧标签</span><input name="techniques" maxlength="300" placeholder="状态设计，插入法，前缀和优化" /></label>
+      <label class="field"><span>推荐理由</span><textarea name="note" required maxlength="1200" placeholder="这道题为什么值得收录，关键模型或独特技巧是什么"></textarea></label>
+      <label class="field"><span>署名（可选）</span><input name="author" maxlength="60" placeholder="昵称" /></label>`;
+  }
+  if (type === "submit-solution") {
+    const options = [...state.data.problems]
+      .sort((a, b) => a.title.localeCompare(b.title, "zh-CN"))
+      .map((problem) => `<option value="${escapeHtml(problem.id)}">${escapeHtml(problem.title)} · ${escapeHtml(problem.problemId || problem.oj)}</option>`)
+      .join("");
+    return `
+      <div class="submission-notice"><i data-lucide="shield-check"></i><span>请提交可公开访问的题解；审核通过后会显示在对应题目旁。</span></div>
+      <label class="field"><span>对应题目</span><select name="targetProblemId" required><option value="">请选择题目</option>${options}</select></label>
+      <label class="field"><span>题解标题</span><input name="title" required maxlength="120" placeholder="例如：官方题解 / 我的题解" /></label>
+      <label class="field"><span>题解链接</span><input name="url" type="url" required maxlength="500" placeholder="https://..." /></label>
+      <label class="field"><span>内容摘要</span><textarea name="summary" maxlength="800" placeholder="主要思路、复杂度或这份题解的特点"></textarea></label>
+      <label class="field"><span>署名（可选）</span><input name="author" maxlength="60" placeholder="昵称" /></label>`;
+  }
+  if (type === "review-submissions") {
+    return `<div class="review-loading"><i data-lucide="loader-circle"></i><span>正在读取待审核投稿</span></div>`;
   }
   if (type === "problem") {
     const problem = state.data.problems.find((item) => item.id === state.editingId);
@@ -1623,6 +1803,7 @@ function closeModal() {
   state.editingId = null;
   state.modalContext = {};
   els.submitButton.classList.remove("danger-button");
+  els.modalFooter.hidden = false;
   els.entryForm.reset();
 }
 
@@ -1635,6 +1816,140 @@ function ensureFeaturedContest() {
   if (state.data.contests.length && !state.data.contests.some((contest) => contest.featured)) {
     state.data.contests[0].featured = true;
   }
+}
+
+async function submitCatalogSuggestion(kind, payload) {
+  if (!cloud.enabled || !cloud.client) throw new Error("投稿服务暂时不可用，请稍后重试");
+  const result = await cloud.client.from("catalog_submissions").insert({ kind, payload });
+  if (result.error) throw result.error;
+}
+
+async function loadPendingSubmissions() {
+  if (!cloud.isAdmin) return;
+  els.formFields.innerHTML = `<div class="review-loading"><i data-lucide="loader-circle"></i><span>正在读取待审核投稿</span></div>`;
+  renderIcons();
+  const result = await cloud.client
+    .from("catalog_submissions")
+    .select("id, kind, payload, created_at")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+  if (result.error) {
+    els.formFields.innerHTML = renderEmpty("读取投稿失败", result.error.message || "请稍后重试。");
+    return;
+  }
+
+  cloud.submissions = result.data || [];
+  renderSubmissionReview();
+}
+
+function renderSubmissionReview() {
+  if (!cloud.submissions.length) {
+    els.formFields.innerHTML = renderEmpty("没有待审核投稿", "新的题目或题解投稿会出现在这里。");
+    renderIcons();
+    return;
+  }
+  els.formFields.innerHTML = `<div class="review-list">${cloud.submissions.map((submission) => {
+    const payload = submission.payload || {};
+    const isProblem = submission.kind === "problem";
+    const target = isProblem ? null : state.data.problems.find((problem) => problem.id === payload.targetProblemId);
+    const knowledge = isProblem ? normalizeKnowledgeSelection(payload.knowledge || []).map(getTopicDisplayName).join("、") : "";
+    return `
+      <article class="review-item">
+        <div class="review-item-head"><span class="review-kind">${isProblem ? "题目" : "题解"}</span><time>${new Date(submission.created_at).toLocaleString("zh-CN")}</time></div>
+        <h3>${escapeHtml(payload.title || "未命名投稿")}</h3>
+        ${!isProblem ? `<p class="review-target">对应：${escapeHtml(target?.title || payload.targetProblemTitle || "题目已不存在")}</p>` : ""}
+        <a class="review-url" href="${escapeHtml(payload.url || "#")}" target="_blank" rel="noreferrer">${escapeHtml(payload.url || "未提供链接")}<i data-lucide="arrow-up-right"></i></a>
+        <p>${escapeHtml(isProblem ? payload.note : payload.summary || "暂无摘要")}</p>
+        <div class="review-meta">
+          ${isProblem ? `<span>${escapeHtml(payload.oj || "其他")}${payload.problemId ? ` · ${escapeHtml(payload.problemId)}` : ""}</span><span>${escapeHtml(payload.kind === "classic" ? "经典例题" : "实战训练")}</span><span>${escapeHtml(knowledge || "未选择知识点")}</span>` : ""}
+          ${payload.author ? `<span>投稿人：${escapeHtml(payload.author)}</span>` : ""}
+        </div>
+        <div class="review-actions">
+          <button class="ghost-button" type="button" data-review-action="reject" data-submission-id="${submission.id}"><i data-lucide="x"></i>驳回</button>
+          <button class="primary-button" type="button" data-review-action="approve" data-submission-id="${submission.id}"><i data-lucide="check"></i>通过并收录</button>
+        </div>
+      </article>`;
+  }).join("")}</div>`;
+  renderIcons();
+}
+
+function isHttpUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function applyApprovedSubmission(submission) {
+  const payload = submission.payload || {};
+  if (!isHttpUrl(payload.url)) throw new Error("投稿链接不是有效的 HTTP 地址");
+  if (submission.kind === "problem") {
+    const knowledge = normalizeKnowledgeSelection(payload.knowledge || []);
+    if (!payload.title?.trim() || !payload.oj?.trim() || !knowledge.length) throw new Error("题目信息或知识点不完整");
+    const source = normalizedProblemSource(payload);
+    const existing = state.data.problems.find((problem) => (
+      problem.submissionId === submission.id
+      || normalizedProblemUrl(problem.url) === normalizedProblemUrl(payload.url)
+      || (source && normalizedProblemSource(problem) === source)
+    ));
+    if (existing) return { changed: false, message: "题目已存在，投稿已标记通过" };
+    state.data.problems.unshift({
+      id: `submitted-${submission.id}`,
+      submissionId: submission.id,
+      title: payload.title.trim(),
+      url: payload.url.trim(),
+      oj: payload.oj.trim(),
+      problemId: String(payload.problemId || "").trim(),
+      difficulty: ["简单", "中等", "困难"].includes(payload.difficulty) ? payload.difficulty : "中等",
+      knowledge,
+      techniques: Array.isArray(payload.techniques) ? payload.techniques.map(String).map((tag) => tag.trim()).filter(Boolean).slice(0, 12) : [],
+      kind: payload.kind === "classic" ? "classic" : "training",
+      note: String(payload.note || "").trim(),
+      solutions: []
+    });
+    return { changed: true, message: "题目已审核并收录" };
+  }
+
+  const problem = state.data.problems.find((item) => item.id === payload.targetProblemId);
+  if (!problem) throw new Error("对应题目已不存在，请先驳回并让投稿人重新选择");
+  problem.solutions ||= [];
+  const existing = problem.solutions.find((solution) => (
+    solution.submissionId === submission.id
+    || normalizedProblemUrl(solution.url) === normalizedProblemUrl(payload.url)
+  ));
+  if (existing) return { changed: false, message: "题解已存在，投稿已标记通过" };
+  problem.solutions.push({
+    submissionId: submission.id,
+    title: String(payload.title || "题解").trim() || "题解",
+    url: payload.url.trim(),
+    summary: String(payload.summary || "").trim(),
+    author: String(payload.author || "").trim()
+  });
+  return { changed: true, message: "题解已审核并收录" };
+}
+
+async function reviewSubmission(submissionId, action) {
+  if (!cloud.isAdmin) throw new Error("当前账号没有管理员权限");
+  const submission = cloud.submissions.find((item) => item.id === submissionId);
+  if (!submission) throw new Error("投稿不存在或已被处理");
+  let message = "投稿已驳回";
+  if (action === "approve") {
+    const applied = applyApprovedSubmission(submission);
+    if (applied.changed) await saveData();
+    message = applied.message;
+  }
+  const result = await cloud.client
+    .from("catalog_submissions")
+    .update({ status: action === "approve" ? "approved" : "rejected", reviewed_at: new Date().toISOString(), reviewed_by: cloud.user.id })
+    .eq("id", submissionId)
+    .eq("status", "pending");
+  if (result.error) throw result.error;
+  cloud.submissions = cloud.submissions.filter((item) => item.id !== submissionId);
+  renderSubmissionReview();
+  render();
+  showToast(message);
 }
 
 async function handleSubmit(event) {
@@ -1668,6 +1983,52 @@ async function handleSubmit(event) {
     }
     closeModal();
     showToast("已退出管理员账号");
+    return;
+  }
+
+  if (type === "submit-problem" || type === "submit-solution") {
+    try {
+      if (type === "submit-problem") {
+        const knowledge = normalizeKnowledgeSelection(form.getAll("knowledge"));
+        if (!knowledge.length) throw new Error("请至少选择一个知识点");
+        await submitCatalogSuggestion("problem", {
+          title: form.get("title").trim(),
+          url: form.get("url").trim(),
+          oj: form.get("oj").trim(),
+          problemId: form.get("problemId").trim(),
+          difficulty: form.get("difficulty"),
+          kind: form.get("kind"),
+          knowledge,
+          techniques: form.get("techniques").split(/[，,]/).map((tag) => tag.trim()).filter(Boolean).slice(0, 12),
+          note: form.get("note").trim(),
+          author: form.get("author").trim()
+        });
+      } else {
+        const targetProblemId = form.get("targetProblemId");
+        const target = state.data.problems.find((problem) => problem.id === targetProblemId);
+        if (!target) throw new Error("请选择仍在题单中的题目");
+        await submitCatalogSuggestion("solution", {
+          targetProblemId,
+          targetProblemTitle: target.title,
+          title: form.get("title").trim(),
+          url: form.get("url").trim(),
+          summary: form.get("summary").trim(),
+          author: form.get("author").trim()
+        });
+      }
+      closeModal();
+      showToast("投稿已提交，等待管理员审核");
+    } catch (error) {
+      showToast(error.message || "投稿失败，请稍后重试");
+    } finally {
+      els.submitButton.disabled = false;
+    }
+    return;
+  }
+
+  if (!canAdminEdit()) {
+    els.submitButton.disabled = false;
+    showToast("当前账号没有管理员权限");
     return;
   }
 
@@ -1705,7 +2066,7 @@ async function handleSubmit(event) {
       successMessage = deletingTopic.parentId ? "子专题已删除" : "知识点已删除";
     }
   } else if (type === "problem") {
-    const knowledge = form.getAll("knowledge");
+    const knowledge = normalizeKnowledgeSelection(form.getAll("knowledge"));
     if (!knowledge.length) {
       els.submitButton.disabled = false;
       showToast("请至少选择一个知识点");
@@ -1728,7 +2089,8 @@ async function handleSubmit(event) {
       knowledge,
       techniques: form.get("techniques").split(/[，,]/).map((tag) => tag.trim()).filter(Boolean),
       kind: form.get("kind"),
-      note: form.get("note").trim()
+      note: form.get("note").trim(),
+      solutions: existing?.solutions || []
     };
     if (existing) Object.assign(existing, problem);
     else state.data.problems.unshift(problem);
@@ -1811,8 +2173,8 @@ function showToast(message) {
 }
 
 function canModify(message = "登录管理员账号后即可修改云端题单") {
-  if (!cloud.enabled || cloud.user) return true;
-  openModal("login");
+  if (canAdminEdit()) return true;
+  openModal(cloud.user ? "account" : "login");
   showToast(message);
   return false;
 }
@@ -1833,12 +2195,13 @@ document.addEventListener("click", async (event) => {
   const topicButton = event.target.closest("[data-topic]");
   if (topicButton) {
     state.topicId = topicButton.dataset.topic;
-    const parent = getParentTopic(getTopic(state.topicId));
-    if (parent) state.expandedTopics.add(parent.id);
-    else if (getChildTopics(state.topicId).length) state.expandedTopics.add(state.topicId);
+    const topic = getTopic(state.topicId);
+    for (const ancestor of getTopicPath(topic).slice(0, -1)) state.expandedTopics.add(ancestor.id);
+    if (getChildTopics(topic.id).length) state.expandedTopics.add(topic.id);
     state.route = "knowledge";
     state.query = "";
-    state.difficulty = "全部";
+    state.classicDifficulty = "全部";
+    state.trainingDifficulty = "全部";
     state.lessonExpanded = false;
     state.revealedRatingId = null;
     els.globalSearch.value = "";
@@ -1855,6 +2218,31 @@ document.addEventListener("click", async (event) => {
         parentId: addTarget.dataset.parentId,
         topicGroup: addTarget.dataset.topicGroup
       });
+    }
+  }
+
+  const submitTarget = event.target.closest("[data-submit-entry]");
+  if (submitTarget) {
+    if (!cloud.enabled) showToast("投稿需要先配置云端数据库");
+    else openModal(submitTarget.dataset.submitEntry);
+  }
+
+  if (event.target.closest("[data-review-submissions]")) {
+    if (!cloud.isAdmin) showToast("当前账号没有管理员权限");
+    else {
+      openModal("review-submissions");
+      await loadPendingSubmissions();
+    }
+  }
+
+  const reviewTarget = event.target.closest("[data-review-action]");
+  if (reviewTarget) {
+    reviewTarget.disabled = true;
+    try {
+      await reviewSubmission(reviewTarget.dataset.submissionId, reviewTarget.dataset.reviewAction);
+    } catch (error) {
+      showToast(error.message || "审核失败，请稍后重试");
+      reviewTarget.disabled = false;
     }
   }
 
@@ -1883,7 +2271,8 @@ document.addEventListener("click", async (event) => {
 
   const difficultyButton = event.target.closest("[data-difficulty]");
   if (difficultyButton) {
-    state.difficulty = difficultyButton.dataset.difficulty;
+    const key = difficultyButton.dataset.difficultyScope === "classic" ? "classicDifficulty" : "trainingDifficulty";
+    state[key] = difficultyButton.dataset.difficulty;
     renderKnowledge();
     renderIcons();
   }
@@ -1928,6 +2317,10 @@ els.syncStatusButton.addEventListener("click", async () => {
     showToast("配置 Supabase 后会启用云端同步");
     return;
   }
+  if (!cloud.client) {
+    showToast(cloud.error || "云端服务暂时不可用");
+    return;
+  }
   if (!cloud.user) {
     openModal("login");
     return;
@@ -1963,9 +2356,9 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-render();
 initializeCloud().catch((error) => {
   cloud.status = "offline";
   cloud.error = error.message || "云端初始化失败";
   renderSyncStatus();
 });
+render();
