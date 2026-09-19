@@ -999,11 +999,25 @@ async function loadRemoteData({ silent = false } = {}) {
   } else if (remote && validateCatalog(remote.data)) {
     state.data = migrateCatalog(remote.data);
     stripSharedProgress(state.data);
+    const migrationChangedCatalog = JSON.stringify(state.data) !== JSON.stringify(remote.data);
     cloud.version = remote.version;
     cloud.updatedAt = remote.updated_at;
     cloud.status = cloud.isAdmin ? "synced" : "readonly";
     cloud.error = "";
     cacheData();
+    if (cloud.isAdmin && migrationChangedCatalog) {
+      setPendingSync(state.data, cloud.version);
+      try {
+        const saved = await writeRemoteCatalog(state.data, cloud.version);
+        cloud.version = saved.version;
+        cloud.updatedAt = saved.updated_at;
+        clearPendingSync();
+        if (!silent) showToast("题单结构已合并并写回云端");
+      } catch (error) {
+        cloud.status = String(error.message || "").includes("catalog_conflict") ? "conflict" : "offline";
+        cloud.error = error.message || "题单迁移写回失败";
+      }
+    }
   } else {
     cloud.version = 0;
     cloud.updatedAt = null;
