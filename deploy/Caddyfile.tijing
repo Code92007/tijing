@@ -10,6 +10,6 @@ tijing.wannafly.cn {
 		Permissions-Policy "geolocation=(), microphone=(), camera=()"
 	}
 
-	@assets path *.css *.js *.png *.jpg *.jpeg *.gif *.webp *.ico *.woff *.woff2
-	header @assets Cache-Control "public, max-age=604800"
+	@mutable path / /index.html /app.js /styles.css /config.js
+	header @mutable Cache-Control "no-cache"
 }

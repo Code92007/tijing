@@ -58,6 +58,8 @@ function escapeMarkdown(value = "") {
 
 function renderMarkdown(backup) {
   const { catalog } = backup;
+  const rootTopics = catalog.topics.filter((topic) => !topic.parentId);
+  const subtopicCount = catalog.topics.length - rootTopics.length;
   const lines = [
     "---",
     `format: ${backup.format}`,
@@ -68,25 +70,13 @@ function renderMarkdown(backup) {
     "",
     "# 题径数据备份",
     "",
-    `知识点 ${catalog.topics.length} 个，题目 ${catalog.problems.length} 道，比赛 ${catalog.contests.length} 场。`,
+    `一级知识点 ${rootTopics.length} 个，子专题 ${subtopicCount} 个，题目 ${catalog.problems.length} 道，比赛 ${catalog.contests.length} 场。`,
     ""
   ];
 
-  for (const topic of catalog.topics) {
-    lines.push(`## ${escapeMarkdown(topic.name)}`, "", topic.description || "", "");
-    if (topic.article?.title) {
-      lines.push(`### ${escapeMarkdown(topic.article.title)}`, "");
-      for (const paragraph of topic.article.body || []) lines.push(paragraph, "");
-    }
-    const problems = catalog.problems.filter((problem) => problem.knowledge?.includes(topic.id));
-    if (problems.length) {
-      lines.push("### 题目", "");
-      for (const problem of problems) {
-        const area = problem.kind === "classic" ? "经典例题" : "实战训练";
-        lines.push(`- [${escapeMarkdown(problem.title)}](${problem.url}) · ${problem.oj} · ${problem.difficulty} · ${area}`);
-      }
-      lines.push("");
-    }
+  for (const topic of rootTopics) {
+    renderTopic(lines, catalog, topic, 2);
+    for (const child of catalog.topics.filter((item) => item.parentId === topic.id)) renderTopic(lines, catalog, child, 3);
   }
 
   if (catalog.contests.length) {
@@ -108,4 +98,23 @@ function renderMarkdown(backup) {
     ""
   );
   return lines.join("\n");
+}
+
+function renderTopic(lines, catalog, topic, level) {
+  const marker = "#".repeat(level);
+  const type = topic.parentId ? (topic.group === "custom" ? " · 我的专题" : " · 标准专题") : "";
+  lines.push(`${marker} ${escapeMarkdown(topic.name)}${type}`, "", topic.description || "", "");
+  if (topic.article?.title) {
+    lines.push(`${marker}# ${escapeMarkdown(topic.article.title)}`, "");
+    for (const paragraph of topic.article.body || []) lines.push(paragraph, "");
+  }
+  const problems = catalog.problems.filter((problem) => problem.knowledge?.includes(topic.id));
+  if (!problems.length) return;
+  lines.push(`${marker}# 题目`, "");
+  for (const problem of problems) {
+    const area = problem.kind === "classic" ? "经典例题" : "实战训练";
+    const techniques = problem.techniques?.length ? ` · 技巧：${problem.techniques.map(escapeMarkdown).join("、")}` : "";
+    lines.push(`- [${escapeMarkdown(problem.title)}](${problem.url}) · ${problem.oj} · ${problem.difficulty} · ${area}${techniques}`);
+  }
+  lines.push("");
 }

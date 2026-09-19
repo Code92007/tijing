@@ -2,7 +2,8 @@
 
 面向算法竞赛学习的题单、教学内容与比赛收藏网站。
 
-- 前端：纯 HTML/CSS/JavaScript，可同时部署到 GitHub Pages 和自己的 Nginx。
+- 前端：纯 HTML/CSS/JavaScript，可同时部署到 GitHub Pages 和自己的 Caddy。
+- 题单：支持一级知识点、标准/自定义子专题、多知识点归类和可检索的技巧标签。
 - 主数据：Supabase Postgres 中的单一、带版本号 JSONB 文档。
 - 权限：所有访问者可读，只有 `catalog_admins` 中的 Supabase 用户可写。
 - 同步：Supabase Realtime 在不同域名和设备间推送最新版本。

@@ -2,8 +2,28 @@ const STORAGE_KEY = "tijing-data-v5";
 const PENDING_KEY = "tijing-pending-sync-v1";
 const PRESET_PROBLEM_IDS = new Set(["p4", "p5", "p6", "p8"]);
 const PRESET_CONTEST_IDS = new Set(["c1", "c2", "c3", "c4"]);
+const CATALOG_SCHEMA_VERSION = 2;
+
+const defaultDpSubtopics = [
+  { id: "dp-linear", name: "线性 DP", description: "沿序列或阶段推进状态，处理前缀、子序列与多状态转移。" },
+  { id: "dp-knapsack", name: "背包 DP", description: "围绕容量、选择次数与物品组合建立状态。" },
+  { id: "dp-interval", name: "区间 DP", description: "按区间长度组织转移，处理合并、分割与括号结构。" },
+  { id: "dp-tree", name: "树形 DP", description: "在树上汇总子树信息，设计父子状态与合并方式。" },
+  { id: "dp-bitmask", name: "状态压缩 DP", description: "用位集合表示选择状态，解决小规模组合决策问题。" }
+].map((topic, index) => ({
+  ...topic,
+  parentId: "dp",
+  group: "standard",
+  color: ["#4f78b5", "#8a6a3f", "#b75c49", "#4b8063", "#735d9f"][index],
+  article: {
+    title: `${topic.name}学习笔记`,
+    body: ["这里还没有教学内容，可以从核心状态、常见转移和典型边界开始整理。"],
+    outline: ["定义状态", "推导转移", "检查边界"]
+  }
+}));
 
 const seedData = {
+  schemaVersion: CATALOG_SCHEMA_VERSION,
   topics: [
     {
       id: "graph",
@@ -77,7 +97,8 @@ const seedData = {
         body: ["一个贪心策略至少需要回答两件事：为什么当前选择不会让答案变差，以及做出选择后剩余问题为什么仍与原问题同构。交换论证是最常见的证明方式。"],
         outline: ["明确局部选择", "尝试交换论证", "确认子问题结构"]
       }
-    }
+    },
+    ...defaultDpSubtopics
   ],
   problems: [],
   contests: []
@@ -102,6 +123,7 @@ const state = {
   modalType: null,
   editingId: null,
   modalContext: {},
+  expandedTopics: new Set(["dp"]),
   lessonExpanded: false
 };
 
@@ -148,7 +170,7 @@ function loadData() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     const data = saved ? JSON.parse(saved) : structuredClone(seedData);
-    const migrated = removePresetEntries(data);
+    const migrated = migrateCatalog(data);
     if (saved) localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
     return migrated;
   } catch {
@@ -156,7 +178,7 @@ function loadData() {
   }
 }
 
-function removePresetEntries(data) {
+function migrateCatalog(data) {
   const migrated = structuredClone(data);
   migrated.problems = Array.isArray(migrated.problems)
     ? migrated.problems.filter((problem) => !PRESET_PROBLEM_IDS.has(problem.id))
@@ -164,6 +186,22 @@ function removePresetEntries(data) {
   migrated.contests = Array.isArray(migrated.contests)
     ? migrated.contests.filter((contest) => !PRESET_CONTEST_IDS.has(contest.id))
     : [];
+  migrated.topics = Array.isArray(migrated.topics) ? migrated.topics : [];
+  migrated.topics = migrated.topics.map((topic) => ({
+    ...topic,
+    parentId: topic.parentId || null,
+    group: topic.parentId ? (topic.group || "standard") : "root"
+  }));
+  if ((Number(migrated.schemaVersion) || 1) < CATALOG_SCHEMA_VERSION) {
+    for (const subtopic of defaultDpSubtopics) {
+      if (!migrated.topics.some((topic) => topic.id === subtopic.id)) migrated.topics.push(structuredClone(subtopic));
+    }
+  }
+  migrated.problems = migrated.problems.map((problem) => ({
+    ...problem,
+    techniques: Array.isArray(problem.techniques) ? problem.techniques : []
+  }));
+  migrated.schemaVersion = CATALOG_SCHEMA_VERSION;
   return migrated;
 }
 
@@ -262,7 +300,7 @@ async function loadRemoteData({ silent = false } = {}) {
   const pending = getPendingSync();
   const remote = result.data;
   if (pending) {
-    state.data = removePresetEntries(pending.data);
+    state.data = migrateCatalog(pending.data);
     cacheData();
     cloud.version = remote?.version || 0;
     cloud.updatedAt = remote?.updated_at || null;
@@ -284,7 +322,7 @@ async function loadRemoteData({ silent = false } = {}) {
       cloud.status = pending.expectedVersion === cloud.version ? (cloud.user ? "offline" : "readonly") : "conflict";
     }
   } else if (remote && validateCatalog(remote.data)) {
-    state.data = removePresetEntries(remote.data);
+    state.data = migrateCatalog(remote.data);
     cloud.version = remote.version;
     cloud.updatedAt = remote.updated_at;
     cloud.status = cloud.user ? "synced" : "readonly";
@@ -318,7 +356,7 @@ function subscribeToRemoteCatalog() {
           showToast("云端有新版本，本机待同步修改仍已保留");
           return;
         }
-        state.data = removePresetEntries(next.data);
+        state.data = migrateCatalog(next.data);
         cloud.version = next.version;
         cloud.updatedAt = next.updated_at;
         cloud.status = cloud.user ? "synced" : "readonly";
@@ -380,7 +418,32 @@ function getTopic(id) {
 }
 
 function getTopicName(id) {
-  return getTopic(id)?.name || id;
+  return state.data.topics.find((topic) => topic.id === id)?.name || id;
+}
+
+function getRootTopics() {
+  return state.data.topics.filter((topic) => !topic.parentId);
+}
+
+function getChildTopics(parentId) {
+  return state.data.topics.filter((topic) => topic.parentId === parentId);
+}
+
+function getParentTopic(topic) {
+  return topic?.parentId ? state.data.topics.find((item) => item.id === topic.parentId) : null;
+}
+
+function getTopicScopeIds(topicId) {
+  return [topicId, ...getChildTopics(topicId).map((topic) => topic.id)];
+}
+
+function problemBelongsToTopic(problem, topicId) {
+  const scope = new Set(getTopicScopeIds(topicId));
+  return problem.knowledge.some((id) => scope.has(id));
+}
+
+function getTopicProblemCount(topicId) {
+  return state.data.problems.filter((problem) => problemBelongsToTopic(problem, topicId)).length;
 }
 
 function getOjStyle(oj) {
@@ -426,15 +489,28 @@ function render() {
 }
 
 function renderSidebar() {
-  els.topicNav.innerHTML = state.data.topics
+  els.topicNav.innerHTML = getRootTopics()
     .map((topic) => {
-      const count = state.data.problems.filter((problem) => problem.knowledge.includes(topic.id)).length;
+      const children = getChildTopics(topic.id);
+      const expanded = children.length && state.expandedTopics.has(topic.id);
+      const standardChildren = children.filter((child) => child.group !== "custom");
+      const customChildren = children.filter((child) => child.group === "custom");
       return `
-        <button class="topic-nav-item ${state.topicId === topic.id && state.route === "knowledge" ? "is-active" : ""}" data-topic="${topic.id}">
-          <span class="topic-dot" style="--topic-color:${topic.color}"></span>
-          <span>${escapeHtml(topic.name)}</span>
-          <span class="topic-count">${count}</span>
-        </button>`;
+        <div class="topic-tree-node">
+          <div class="topic-nav-row">
+            <button class="topic-nav-item ${state.topicId === topic.id && state.route === "knowledge" ? "is-active" : ""}" data-topic="${topic.id}">
+              <span class="topic-dot" style="--topic-color:${topic.color}"></span>
+              <span>${escapeHtml(topic.name)}</span>
+              <span class="topic-count">${getTopicProblemCount(topic.id)}</span>
+            </button>
+            ${children.length ? `<button class="topic-expand ${expanded ? "is-expanded" : ""}" data-toggle-topic="${topic.id}" aria-label="${expanded ? "收起" : "展开"}${escapeHtml(topic.name)}子专题" title="${expanded ? "收起子专题" : "展开子专题"}"><i data-lucide="chevron-right"></i></button>` : ""}
+          </div>
+          ${children.length ? `
+            <div class="topic-children ${expanded ? "is-expanded" : ""}">
+              ${standardChildren.map(renderSidebarChild).join("")}
+              ${customChildren.length ? `<span class="topic-child-label">我的专题</span>${customChildren.map(renderSidebarChild).join("")}` : ""}
+            </div>` : ""}
+        </div>`;
     })
     .join("");
 
@@ -449,10 +525,21 @@ function renderSidebar() {
   els.weeklyProgressBar.style.width = `${training.length ? (done / training.length) * 100 : 0}%`;
 }
 
+function renderSidebarChild(topic) {
+  return `
+    <button class="topic-nav-item topic-nav-child ${state.topicId === topic.id && state.route === "knowledge" ? "is-active" : ""}" data-topic="${topic.id}">
+      <span class="topic-branch" aria-hidden="true"></span>
+      <span>${escapeHtml(topic.name)}</span>
+      ${topic.group === "custom" ? `<i class="custom-topic-icon" data-lucide="sparkles" aria-label="我的专题"></i>` : ""}
+      <span class="topic-count">${getTopicProblemCount(topic.id)}</span>
+    </button>`;
+}
+
 function renderTopbar() {
   const topic = getTopic(state.topicId);
+  const parent = getParentTopic(topic);
   els.breadcrumb.innerHTML = state.route === "knowledge"
-    ? `<span>知识点题单</span><i data-lucide="chevron-right"></i><strong>${escapeHtml(topic.name)}</strong>`
+    ? `<span>知识点题单</span><i data-lucide="chevron-right"></i>${parent ? `<span>${escapeHtml(parent.name)}</span><i data-lucide="chevron-right"></i>` : ""}<strong>${escapeHtml(topic.name)}</strong>`
     : `<span>题径</span><i data-lucide="chevron-right"></i><strong>比赛收藏</strong>`;
   els.globalSearch.placeholder = state.route === "knowledge" ? "搜索题目、OJ 或标签" : "搜索比赛、OJ 或标签";
   els.knowledgeView.hidden = state.route !== "knowledge";
@@ -463,12 +550,16 @@ function renderTopbar() {
 function matchesQuery(problem) {
   const q = state.query.trim().toLowerCase();
   if (!q) return true;
-  const text = [problem.title, problem.problemId, problem.oj, problem.note, ...problem.knowledge.map(getTopicName)].join(" ").toLowerCase();
+  const text = [problem.title, problem.problemId, problem.oj, problem.note, ...(problem.techniques || []), ...problem.knowledge.map(getTopicName)].join(" ").toLowerCase();
   return text.includes(q);
 }
 
 function renderTags(ids, max = ids.length) {
   return ids.slice(0, max).map((id) => `<span class="tag">${escapeHtml(getTopicName(id))}</span>`).join("");
+}
+
+function renderTechniqueTags(tags = [], max = tags.length) {
+  return tags.slice(0, max).map((tag) => `<button class="technique-tag" data-technique="${escapeHtml(tag)}" title="按技巧检索"># ${escapeHtml(tag)}</button>`).join("");
 }
 
 function renderEntryActions(type, id, label) {
@@ -496,16 +587,47 @@ function renderProblemCard(problem) {
       <h3>${escapeHtml(problem.title)}</h3>
       <span class="problem-id">${escapeHtml(problem.oj)} · ${escapeHtml(problem.problemId || "外部题目")}</span>
       <p class="problem-note">${escapeHtml(problem.note || "暂无补充说明")}</p>
-      <div class="tag-row">${renderTags(problem.knowledge)}</div>
+      <div class="tag-row">${renderTags(problem.knowledge)}${renderTechniqueTags(problem.techniques)}</div>
       <a class="problem-card-link" href="${escapeHtml(problem.url)}" target="_blank" rel="noreferrer">
         去做题 <i data-lucide="arrow-up-right"></i>
       </a>
     </article>`;
 }
 
+function renderSubtopicOverview(topic) {
+  const children = getChildTopics(topic.id);
+  if (!children.length) return "";
+  const standard = children.filter((child) => child.group !== "custom");
+  const custom = children.filter((child) => child.group === "custom");
+  const renderGroup = (title, description, items, group) => `
+    <div class="subtopic-group">
+      <div class="subtopic-group-heading">
+        <div><h3>${title}</h3><p>${description}</p></div>
+        ${group === "custom" ? `<button class="text-button" data-add="topic" data-parent-id="${topic.id}" data-topic-group="custom"><i data-lucide="plus"></i>添加我的专题</button>` : ""}
+      </div>
+      ${items.length ? `<div class="subtopic-grid">${items.map((child) => `
+        <button class="subtopic-card" data-topic="${child.id}">
+          <span class="subtopic-card-top"><span class="topic-dot" style="--topic-color:${child.color}"></span>${child.group === "custom" ? `<span class="custom-badge"><i data-lucide="sparkles"></i>我的专题</span>` : `<span>标准专题</span>`}</span>
+          <strong>${escapeHtml(child.name)}</strong>
+          <span class="subtopic-description">${escapeHtml(child.description)}</span>
+          <span class="subtopic-count">${getTopicProblemCount(child.id)} 道题 <i data-lucide="arrow-right"></i></span>
+        </button>`).join("")}</div>` : `<div class="subtopic-empty">还没有自定义专题，可以从一个常用技巧开始整理。</div>`}
+    </div>`;
+
+  return `
+    <section class="section subtopic-section">
+      <div class="section-heading">
+        <div><h2>子专题</h2><p>按体系学习，也保留自己的建模经验。</p></div>
+      </div>
+      ${renderGroup("标准专题", "稳定的知识结构，用于系统训练。", standard, "standard")}
+      ${renderGroup("我的专题", "把反复出现的技巧、错解与思考方式沉淀下来。", custom, "custom")}
+    </section>`;
+}
+
 function renderKnowledge() {
   const topic = getTopic(state.topicId);
-  const topicProblems = state.data.problems.filter((problem) => problem.knowledge.includes(topic.id) && matchesQuery(problem));
+  const parent = getParentTopic(topic);
+  const topicProblems = state.data.problems.filter((problem) => problemBelongsToTopic(problem, topic.id) && matchesQuery(problem));
   const classics = topicProblems.filter((problem) => problem.kind === "classic");
   const training = topicProblems.filter((problem) => problem.kind === "training");
   const filteredTraining = training.filter((problem) => state.difficulty === "全部" || problem.difficulty === state.difficulty);
@@ -517,10 +639,14 @@ function renderKnowledge() {
       <header class="topic-hero">
         <div class="topic-hero-main">
           <div class="topic-kicker-row">
-            <div class="topic-kicker"><span class="topic-dot" style="--topic-color:${topic.color}"></span> KNOWLEDGE PATH</div>
-            ${renderEntryActions("topic", topic.id, topic.name)}
+            <div class="topic-kicker"><span class="topic-dot" style="--topic-color:${topic.color}"></span>${topic.group === "custom" ? "MY TOPIC" : parent ? "SUBTOPIC" : "KNOWLEDGE PATH"}</div>
+            <div class="topic-heading-actions">
+              ${!parent ? `<button class="entry-action" data-add="topic" data-parent-id="${topic.id}" data-topic-group="custom" aria-label="在${escapeHtml(topic.name)}下新增子专题" title="新增子专题"><i data-lucide="folder-plus"></i></button>` : ""}
+              ${renderEntryActions("topic", topic.id, topic.name)}
+            </div>
           </div>
           <h1>${escapeHtml(topic.name)}</h1>
+          ${parent ? `<button class="parent-topic-link" data-topic="${parent.id}"><i data-lucide="corner-up-left"></i>${escapeHtml(parent.name)}</button>` : ""}
           <p>${escapeHtml(topic.description)}</p>
           <div class="topic-meta">
             <span><i data-lucide="book-open"></i>${classics.length} 道经典例题</span>
@@ -532,6 +658,8 @@ function renderKnowledge() {
           <div><strong>${doneCount}</strong><span>已经完成</span></div>
         </div>
       </header>
+
+      ${renderSubtopicOverview(topic)}
 
       <section class="section">
         <div class="section-heading">
@@ -586,7 +714,7 @@ function renderKnowledge() {
                     <td><div class="table-title">${ojMark(problem.oj)}<div><a href="${escapeHtml(problem.url)}" target="_blank" rel="noreferrer">${escapeHtml(problem.title)}</a><div class="problem-id">${escapeHtml(problem.problemId || problem.oj)}</div></div></div></td>
                     <td><span class="difficulty ${difficultyClass(problem.difficulty)}">${escapeHtml(problem.difficulty)}</span></td>
                     <td><div class="table-tags">${renderTags(problem.knowledge, 2)}</div></td>
-                    <td class="problem-note">${escapeHtml(problem.note || "—")}</td>
+                    <td class="problem-note"><span>${escapeHtml(problem.note || "—")}</span>${problem.techniques?.length ? `<div class="table-techniques">${renderTechniqueTags(problem.techniques, 2)}</div>` : ""}</td>
                     <td class="table-actions">${renderEntryActions("problem", problem.id, problem.title)}</td>
                   </tr>`).join("")}
               </tbody>
@@ -705,16 +833,24 @@ function closeSidebar() {
 }
 
 function topicOptions(selected = state.topicId) {
-  return state.data.topics.map((topic) => `<option value="${topic.id}" ${topic.id === selected ? "selected" : ""}>${escapeHtml(topic.name)}</option>`).join("");
+  return state.data.topics.map((topic) => {
+    const parent = getParentTopic(topic);
+    const label = parent ? `${parent.name} / ${topic.name}` : topic.name;
+    return `<option value="${topic.id}" ${topic.id === selected ? "selected" : ""}>${escapeHtml(label)}</option>`;
+  }).join("");
 }
 
 function topicCheckboxes(selectedIds = [state.topicId]) {
   const selected = new Set(selectedIds);
-  return state.data.topics.map((topic) => `
-    <label class="checkbox-option">
-      <input type="checkbox" name="knowledge" value="${topic.id}" ${selected.has(topic.id) ? "checked" : ""} />
-      <span class="topic-dot" style="--topic-color:${topic.color}"></span>${escapeHtml(topic.name)}
-    </label>`).join("");
+  return state.data.topics.map((topic) => {
+    const parent = getParentTopic(topic);
+    const label = parent ? `${parent.name} / ${topic.name}` : topic.name;
+    return `
+      <label class="checkbox-option ${parent ? "is-subtopic" : ""}">
+        <input type="checkbox" name="knowledge" value="${topic.id}" ${selected.has(topic.id) ? "checked" : ""} />
+        <span class="topic-dot" style="--topic-color:${topic.color}"></span><span>${escapeHtml(label)}</span>
+      </label>`;
+  }).join("");
 }
 
 function openModal(type, itemId = null, context = {}) {
@@ -726,7 +862,7 @@ function openModal(type, itemId = null, context = {}) {
   const configs = {
     problem: { eyebrow: "PROBLEM", title: editing ? "编辑题目" : "收录题目", button: editing ? "保存修改" : "保存题目" },
     contest: { eyebrow: "CONTEST", title: editing ? "编辑比赛" : "收藏比赛", button: editing ? "保存修改" : "保存比赛" },
-    topic: { eyebrow: "KNOWLEDGE", title: editing ? "编辑知识点" : "新增知识点", button: editing ? "保存修改" : "创建知识点" },
+    topic: { eyebrow: "KNOWLEDGE", title: editing ? "编辑知识点" : context.parentId ? "新增子专题" : "新增知识点", button: editing ? "保存修改" : "创建知识点" },
     article: { eyebrow: "LESSON", title: "编辑教学内容", button: "保存内容" },
     delete: { eyebrow: "DELETE", title: "确认删除", button: "确认删除" },
     login: { eyebrow: "CLOUD", title: "管理员登录", button: "发送登录链接" },
@@ -779,6 +915,7 @@ function getFormFields(type) {
         <fieldset class="field"><legend>所在区域</legend><div class="radio-row"><label class="radio-option"><input type="radio" name="kind" value="classic" ${kind === "classic" ? "checked" : ""} />经典例题</label><label class="radio-option"><input type="radio" name="kind" value="training" ${kind === "training" ? "checked" : ""} />实战训练</label></div></fieldset>
       </div>
       <fieldset class="field"><legend>知识点（可多选）</legend><div class="checkbox-grid">${topicCheckboxes(problem?.knowledge || [state.topicId])}</div></fieldset>
+      <label class="field"><span>技巧标签</span><input name="techniques" value="${escapeHtml(problem?.techniques?.join("，") || "")}" placeholder="Top-k 转恰选 k 个，等价转化，状态降维" /><small>描述这道题具体值得复用的技巧，使用逗号分隔</small></label>
       <label class="field"><span>备注</span><textarea name="note" placeholder="这道题值得收录的原因、关键思路或易错点">${escapeHtml(problem?.note || "")}</textarea></label>`;
   }
   if (type === "contest") {
@@ -795,10 +932,18 @@ function getFormFields(type) {
   }
   if (type === "topic") {
     const topic = state.data.topics.find((item) => item.id === state.editingId);
+    const parentId = topic?.parentId || state.modalContext.parentId || "";
+    const topicGroup = topic?.group || state.modalContext.topicGroup || "custom";
+    const parent = parentId ? getTopic(parentId) : null;
     return `
       <label class="field"><span>知识点名称</span><input name="name" required value="${escapeHtml(topic?.name || "")}" placeholder="例如：计算几何" /></label>
       <label class="field"><span>一句话说明</span><textarea name="description" required placeholder="这个知识点会收录哪些内容">${escapeHtml(topic?.description || "")}</textarea></label>
-      <label class="field"><span>识别色</span><input name="color" type="color" value="${escapeHtml(topic?.color || "#256d4b")}" /></label>`;
+      ${topic ? `
+        <input type="hidden" name="parentId" value="${escapeHtml(parentId)}" />
+        <div class="account-summary"><strong>${parent ? `子专题 · ${escapeHtml(parent.name)}` : "一级知识点"}</strong><span>已有知识点的层级固定，避免题目导航关系意外变化。</span></div>` : `
+        <label class="field"><span>所属一级知识点</span><select name="parentId"><option value="">作为一级知识点</option>${getRootTopics().map((root) => `<option value="${root.id}" ${root.id === parentId ? "selected" : ""}>${escapeHtml(root.name)}</option>`).join("")}</select><small>选择一级知识点后，它会作为子专题显示。</small></label>`}
+      <fieldset class="field"><legend>专题类型</legend><div class="radio-row"><label class="radio-option"><input type="radio" name="topicGroup" value="standard" ${topicGroup === "standard" ? "checked" : ""} />标准专题</label><label class="radio-option"><input type="radio" name="topicGroup" value="custom" ${topicGroup === "custom" ? "checked" : ""} />我的专题</label></div><small>一级知识点会自动忽略这个选项。</small></fieldset>
+      <label class="field"><span>识别色</span><input name="color" type="color" value="${escapeHtml(topic?.color || parent?.color || "#256d4b")}" /></label>`;
   }
   const topic = getTopic(state.topicId);
   const article = topic.article || { title: "", body: [], outline: [] };
@@ -876,19 +1021,26 @@ async function handleSubmit(event) {
       successMessage = "比赛已删除";
     } else if (entityType === "topic") {
       const linkedCount = state.data.problems.filter((problem) => problem.knowledge.includes(state.editingId)).length;
+      const childCount = getChildTopics(state.editingId).length;
       if (linkedCount) {
         els.submitButton.disabled = false;
         showToast(`请先修改关联的 ${linkedCount} 道题，再删除知识点`);
         return;
       }
-      if (state.data.topics.length === 1) {
+      if (childCount) {
         els.submitButton.disabled = false;
-        showToast("至少需要保留一个知识点");
+        showToast(`请先处理下面的 ${childCount} 个子专题`);
+        return;
+      }
+      const deletingTopic = getTopic(state.editingId);
+      if (!deletingTopic.parentId && getRootTopics().length === 1) {
+        els.submitButton.disabled = false;
+        showToast("至少需要保留一个一级知识点");
         return;
       }
       state.data.topics = state.data.topics.filter((topic) => topic.id !== state.editingId);
-      state.topicId = state.data.topics[0].id;
-      successMessage = "知识点已删除";
+      state.topicId = deletingTopic.parentId || getRootTopics()[0].id;
+      successMessage = deletingTopic.parentId ? "子专题已删除" : "知识点已删除";
     }
   } else if (type === "problem") {
     const knowledge = form.getAll("knowledge");
@@ -906,6 +1058,7 @@ async function handleSubmit(event) {
       problemId: form.get("problemId").trim(),
       difficulty: form.get("difficulty"),
       knowledge,
+      techniques: form.get("techniques").split(/[，,]/).map((tag) => tag.trim()).filter(Boolean),
       kind: form.get("kind"),
       note: form.get("note").trim(),
       done: existing?.done || false
@@ -934,24 +1087,30 @@ async function handleSubmit(event) {
   } else if (type === "topic") {
     const name = form.get("name").trim();
     const existing = state.data.topics.find((topic) => topic.id === state.editingId);
+    const parentId = form.get("parentId") || null;
+    const group = parentId ? form.get("topicGroup") : "root";
     if (existing) {
       existing.name = name;
       existing.color = form.get("color");
       existing.description = form.get("description").trim();
+      existing.group = existing.parentId ? form.get("topicGroup") : "root";
       state.topicId = existing.id;
     } else {
       const id = slugify(name);
       state.data.topics.push({
         id,
         name,
+        parentId,
+        group,
         color: form.get("color"),
         description: form.get("description").trim(),
         article: { title: `${name}学习笔记`, body: ["这里还没有教学内容。"], outline: ["建立知识框架", "补充经典例题", "安排实战训练"] }
       });
       state.topicId = id;
+      if (parentId) state.expandedTopics.add(parentId);
     }
     state.route = "knowledge";
-    successMessage = existing ? "知识点已更新" : "知识点已创建";
+    successMessage = existing ? "知识点已更新" : parentId ? "子专题已创建" : "知识点已创建";
   } else if (type === "article") {
     const topic = getTopic(form.get("topicId"));
     topic.article = {
@@ -995,9 +1154,21 @@ document.addEventListener("click", async (event) => {
   const routeButton = event.target.closest("[data-route]");
   if (routeButton) navigate(routeButton.dataset.route);
 
+  const topicToggle = event.target.closest("[data-toggle-topic]");
+  if (topicToggle) {
+    const id = topicToggle.dataset.toggleTopic;
+    if (state.expandedTopics.has(id)) state.expandedTopics.delete(id);
+    else state.expandedTopics.add(id);
+    renderSidebar();
+    renderIcons();
+  }
+
   const topicButton = event.target.closest("[data-topic]");
   if (topicButton) {
     state.topicId = topicButton.dataset.topic;
+    const parent = getParentTopic(getTopic(state.topicId));
+    if (parent) state.expandedTopics.add(parent.id);
+    else if (getChildTopics(state.topicId).length) state.expandedTopics.add(state.topicId);
     state.route = "knowledge";
     state.query = "";
     state.difficulty = "全部";
@@ -1010,7 +1181,13 @@ document.addEventListener("click", async (event) => {
 
   const addTarget = event.target.closest("[data-add]");
   if (addTarget) {
-    if (canModify()) openModal(addTarget.dataset.add, null, { kind: addTarget.dataset.kind });
+    if (canModify()) {
+      openModal(addTarget.dataset.add, null, {
+        kind: addTarget.dataset.kind,
+        parentId: addTarget.dataset.parentId,
+        topicGroup: addTarget.dataset.topicGroup
+      });
+    }
   }
 
   const editTarget = event.target.closest("[data-edit]");
@@ -1024,6 +1201,14 @@ document.addEventListener("click", async (event) => {
       entityType: deleteTarget.dataset.delete,
       label: deleteTarget.dataset.entryLabel
     });
+  }
+
+  const techniqueTarget = event.target.closest("[data-technique]");
+  if (techniqueTarget) {
+    state.query = techniqueTarget.dataset.technique;
+    els.globalSearch.value = state.query;
+    renderKnowledge();
+    renderIcons();
   }
 
   if (event.target.closest("[data-close-modal]")) closeModal();
