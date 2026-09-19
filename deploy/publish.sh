@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_dir="${1:-/root/tijing}"
-web_root="${2:-/var/www/tijing}"
+web_root="${2:-/root/tijing/public}"
 
 install -d -m 0755 "$web_root"
 install -m 0644 "$repo_dir/index.html" "$web_root/index.html"
