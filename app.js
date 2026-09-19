@@ -3,25 +3,467 @@ const PENDING_KEY = "tijing-pending-sync-v1";
 const PROGRESS_KEY = "tijing-progress-v1";
 const PRESET_PROBLEM_IDS = new Set(["p4", "p5", "p6", "p8"]);
 const PRESET_CONTEST_IDS = new Set(["c1", "c2", "c3", "c4"]);
-const CATALOG_SCHEMA_VERSION = 2;
+const CATALOG_SCHEMA_VERSION = 4;
 
 const defaultDpSubtopics = [
   { id: "dp-linear", name: "线性 DP", description: "沿序列或阶段推进状态，处理前缀、子序列与多状态转移。" },
   { id: "dp-knapsack", name: "背包 DP", description: "围绕容量、选择次数与物品组合建立状态。" },
   { id: "dp-interval", name: "区间 DP", description: "按区间长度组织转移，处理合并、分割与括号结构。" },
   { id: "dp-tree", name: "树形 DP", description: "在树上汇总子树信息，设计父子状态与合并方式。" },
-  { id: "dp-bitmask", name: "状态压缩 DP", description: "用位集合表示选择状态，解决小规模组合决策问题。" }
+  { id: "dp-bitmask", name: "状态压缩 DP", description: "用位集合表示选择状态，解决小规模组合决策问题。" },
+  { id: "dp-subset", name: "子集 DP", description: "围绕子集枚举、子集划分与补集关系组织转移。" },
+  { id: "dp-sos", name: "SOS DP", description: "沿子集包含关系做高维前缀和与信息聚合。" },
+  { id: "dp-digit", name: "数位 DP", description: "按数位处理上界、前导零与自动机状态，统计区间内的数字。" },
+  { id: "dp-probability", name: "概率 / 期望 DP", description: "用概率转移、期望线性性与贡献拆分刻画随机过程。" }
 ].map((topic, index) => ({
   ...topic,
   parentId: "dp",
   group: "standard",
-  color: ["#4f78b5", "#8a6a3f", "#b75c49", "#4b8063", "#735d9f"][index],
+  color: ["#4f78b5", "#8a6a3f", "#b75c49", "#4b8063", "#735d9f", "#2f7d83", "#a05d75", "#5f6f3d", "#a46532"][index],
   article: {
     title: `${topic.name}学习笔记`,
     body: ["这里还没有教学内容，可以从核心状态、常见转移和典型边界开始整理。"],
     outline: ["定义状态", "推导转移", "检查边界"]
   }
 }));
+
+const defaultDpCustomTopics = [
+  {
+    id: "dp-wrong-solutions",
+    name: "错解不优",
+    description: "记录能通过但不够优、复杂度分析有误或需要进一步松弛优化的解法。",
+    parentId: "dp",
+    group: "custom",
+    color: "#8b4f4f",
+    article: {
+      title: "从可过到更优：复盘错解与松弛过程",
+      body: ["保留错误思路出现的原因、能通过哪些数据，以及如何从状态和复杂度出发找到更稳健的改进。"],
+      outline: ["复现原始思路", "定位复杂度或正确性问题", "整理可迁移的改进方法"]
+    }
+  }
+];
+
+function createDpProblem(id, kind, title, url, oj, problemId, difficulty, knowledge, techniques, note) {
+  return { id: `dp-${id}`, title, url, oj, problemId, difficulty, knowledge, techniques, kind, note };
+}
+
+const reviewedDpProblems = [
+  createDpProblem("n01", "training", "ARC170 C - Prefix Mex Sequence", "https://atcoder.jp/contests/arc170/tasks/arc170_c", "AtCoder", "ARC170 C", "困难", ["dp-linear"], ["计数 DP", "MEX", "状态压缩"], "围绕前缀 MEX 压缩必要信息，统计满足条件的序列方案。"),
+  createDpProblem("n02", "classic", "ABC221 H - Count Multiset", "https://atcoder.jp/contests/abc221/tasks/abc221_h", "AtCoder", "ABC221 H", "困难", ["dp-linear"], ["整数拆分", "容斥", "差分优化"], "把多重集计数转成拆分数递推，再用容斥和差分整理转移。"),
+  createDpProblem("n03", "training", "CF1913D - Array Collapse", "https://codeforces.com/contest/1913/problem/D", "Codeforces", "1913D", "困难", ["dp-linear"], ["单调栈", "计数 DP", "转移优化"], "用单调栈维护仍会影响答案的前驱，压缩计数 DP 的转移范围。"),
+  createDpProblem("n04", "classic", "CF1860D - Balanced String", "https://codeforces.com/contest/1860/problem/D", "Codeforces", "1860D", "困难", ["dp-linear"], ["二维状态", "逆序对计数", "状态设计"], "按已放置字符数和逆序对贡献推进，是基础多维 DP 的完整范例。"),
+  createDpProblem("n05", "training", "ABC299 F - Square Subsequence", "https://atcoder.jp/contests/abc299/tasks/abc299_f", "AtCoder", "ABC299 F", "困难", ["dp-linear"], ["子序列 DP", "序列自动机", "next 数组"], "借助 next 数组快速定位下一字符，统计两个相同子序列的构造方案。"),
+  createDpProblem("n06", "training", "ECNA 2023 B - B Road Band", "https://codeforces.com/gym/104757/problem/B", "GYM", "104757B", "困难", ["dp-linear"], ["分段 DP", "决策单调性", "分治优化"], "将选点对应到连续分段，再用决策单调性优化分段转移。"),
+  createDpProblem("n07", "training", "2022 ICPC 济南站 J - Skills", "https://codeforces.com/gym/104076/problem/J", "GYM", "104076J", "困难", ["dp-linear"], ["根号分治", "松弛", "复杂度优化"], "按状态规模分层处理松弛，优化技巧保留为标签而非独立分组。"),
+  createDpProblem("n08", "training", "ARC164 D - 1D Coulomb", "https://atcoder.jp/contests/arc164/tasks/arc164_d", "AtCoder", "ARC164 D", "困难", ["dp-linear"], ["组合计数", "前缀状态", "括号结构"], "把全局约束改写为前缀状态，在逐位递推中完成组合计数。"),
+  createDpProblem("n09", "training", "ABC279 G - At Most 2 Colors", "https://atcoder.jp/contests/abc279/tasks/abc279_g", "AtCoder", "ABC279 G", "困难", ["dp-linear"], ["计数 DP", "滑动窗口", "前缀和优化"], "维护最近颜色约束，用滑动窗口和前缀和加速计数转移。"),
+  createDpProblem("n10", "training", "CF1739E - Cleaning Robot", "https://codeforces.com/contest/1739/problem/E", "Codeforces", "1739E", "困难", ["dp-linear"], ["局部状态", "分类讨论", "滚动 DP"], "用小规模局部状态覆盖所有清扫关系，重点检查转移是否完整。"),
+  createDpProblem("n11", "classic", "CF1582F2 - Korney Korneevich and XOR", "https://codeforces.com/contest/1582/problem/F2", "Codeforces", "1582F2", "困难", ["dp-linear"], ["值域状态", "XOR", "可达性 DP"], "用值域上的最小末尾值表示可达 XOR，消除对子序列位置的显式记录。"),
+  createDpProblem("n12", "training", "CF1542E2 - Abnormal Permutation Pairs", "https://codeforces.com/contest/1542/problem/E2", "Codeforces", "1542E2", "困难", ["dp-linear"], ["排列计数", "组合数学", "贡献 DP"], "围绕排列对的贡献设计计数状态，组合推导和递推结合紧密。"),
+  createDpProblem("n13", "classic", "ABC134 F - Permutation Oddness", "https://atcoder.jp/contests/abc134/tasks/abc134_f", "AtCoder", "ABC134 F", "困难", ["dp-linear"], ["排列 DP", "插入法", "贡献维护"], "逐个插入排列元素并维护距离贡献，是排列插入 DP 的标准范例。"),
+  createDpProblem("n15", "training", "BAPC 2018 E - Entirely Unsorted Sequences", "https://codeforces.com/gym/102007/problem/E", "GYM", "102007E", "困难", ["dp-linear"], ["计数 DP", "首个非法位置", "多重集排列"], "枚举第一个破坏位置，用补集计数处理含重复元素的排列。"),
+  createDpProblem("n16", "classic", "HDU4055 - Number String", "https://acm.hdu.edu.cn/showproblem.php?pid=4055", "HDU", "4055", "中等", ["dp-linear"], ["排列 DP", "插入法", "前缀和优化", "波浪排列"], "插入新最大值并按相对位置转移；与“置置置换”同构，只保留这一条主记录。"),
+  createDpProblem("n18", "classic", "FZU2129 - 子序列个数", "http://acm.fzu.edu.cn/problem.php?pid=2129", "其他", "FZU2129", "中等", ["dp-linear"], ["本质不同子序列", "last 数组", "去重计数"], "记录每个值上次出现位置，扣除重复贡献，是不同子序列计数的标准模型。"),
+  createDpProblem("n19", "training", "CF1149B - Three Religions", "https://codeforces.com/contest/1149/problem/B", "Codeforces", "1149B", "困难", ["dp-linear"], ["多序列 DP", "在线子序列", "next 数组"], "动态维护三个串的组合状态，用 next 数组快速判断共同子序列。"),
+  createDpProblem("n20", "classic", "CF1110D - Jongmah", "https://codeforces.com/contest/1110/problem/D", "Codeforces", "1110D", "困难", ["dp-linear"], ["局部计数", "滚动状态", "三元组选择"], "把跨值三元组限制在相邻值域内，用小状态滚动完成最优选择。"),
+  createDpProblem("n21", "classic", "HDU4003 - Find Metal Mineral", "https://acm.hdu.edu.cn/showproblem.php?pid=4003", "HDU", "4003", "困难", ["dp-tree", "dp-knapsack"], ["树形背包", "分组背包", "返回状态"], "区分是否返回父节点，在子树间做分组背包合并。"),
+  createDpProblem("n22", "training", "CF1982E - Number of k-good subarrays", "https://codeforces.com/contest/1982/problem/E", "Codeforces", "1982E", "困难", ["dp-digit"], ["二进制数位 DP", "区间合并", "记忆化搜索"], "把二进制幂次区间的信息作为可合并状态，处理不同长度的数位块。"),
+  createDpProblem("n23", "training", "CCPC Guangzhou 2022 M - XOR Sum", "https://codeforces.com/gym/104053/problem/M", "GYM", "104053M", "困难", ["dp-digit", "dp-knapsack"], ["数位背包", "二进制", "余数状态"], "同时记录卡上界数量和当前余数，是数位 DP 与背包状态的交叉模型。"),
+  createDpProblem("n24", "training", "CF1734F - Zeros and Ones", "https://codeforces.com/contest/1734/problem/F", "Codeforces", "1734F", "困难", ["dp-digit"], ["Thue-Morse", "进位", "数位递推"], "利用 Thue-Morse 的自相似性，把区间比较转成带进位的数位递推。"),
+  createDpProblem("n25", "training", "CF1487F - Ones", "https://codeforces.com/contest/1487/problem/F", "Codeforces", "1487F", "困难", ["dp-digit"], ["高位到低位", "借位", "延迟贡献"], "从高位向低位记录差值和仍会生效的全 1 前缀，处理借位影响。"),
+  createDpProblem("n27", "training", "CF1868C - Travel Plan", "https://codeforces.com/contest/1868/problem/C", "Codeforces", "1868C", "困难", ["dp-tree"], ["完全二叉树", "组合计数", "记忆化"], "利用隐式完全二叉树的重复结构，记忆化统计路径贡献。"),
+  createDpProblem("n28", "training", "HDU7401 - 流量监控", "https://acm.hdu.edu.cn/showproblem.php?pid=7401", "HDU", "7401", "困难", ["dp-tree", "dp-knapsack"], ["树形背包", "匹配计数", "二维背包"], "在子树中统计未匹配节点，并用额外维度累计祖先链四元组贡献。"),
+  createDpProblem("n29", "training", "CCPC Guangzhou 2022 I - Infection", "https://codeforces.com/gym/104053/problem/I", "GYM", "104053I", "困难", ["dp-tree", "dp-knapsack", "dp-probability"], ["树上概率 DP", "树形背包", "感染分布"], "在树上合并感染数量的概率分布，同时覆盖树形、背包和概率 DP。"),
+  createDpProblem("n30", "training", "CF1695D2 - Tree Queries", "https://codeforces.com/contest/1695/problem/D2", "Codeforces", "1695D2", "困难", ["dp-tree"], ["树上状态", "结构分类", "叶子贡献"], "围绕树的分叉和叶子结构设计状态，训练树形问题的结构观察。"),
+  createDpProblem("n31", "training", "HDU6540 - Neko and tree", "https://acm.hdu.edu.cn/showproblem.php?pid=6540", "HDU", "6540", "困难", ["dp-tree"], ["树形 DP", "计数", "子树合并"], "在子树间合并计数状态，是正统的树上状态合并训练。"),
+  createDpProblem("n32", "classic", "HDU6035 - Colorful Tree", "https://acm.hdu.edu.cn/showproblem.php?pid=6035", "HDU", "6035", "困难", ["dp-tree"], ["颜色贡献", "补集计数", "树上路径"], "按颜色计算未经过该颜色的路径补集，再汇总所有路径贡献。"),
+  createDpProblem("n33", "training", "2020 小米邀请赛决赛 J - Rikka with Book", "https://ac.nowcoder.com/acm/contest/9328/J", "牛客", "9328 J", "困难", ["dp-bitmask"], ["状态压缩 DP", "子集划分", "集合收益"], "预处理集合收益并枚举子集划分，完成小规模集合决策。"),
+  createDpProblem("n34", "training", "CF1392G - Omkar and Pies", "https://codeforces.com/contest/1392/problem/G", "Codeforces", "1392G", "困难", ["dp-bitmask", "dp-subset"], ["置换状态", "滑动区间", "子集状态"], "用掩码描述短串置换结果，在超长操作序列上维护最优区间。"),
+  createDpProblem("n35", "training", "CF1313D - Happy New Year", "https://codeforces.com/contest/1313/problem/D", "Codeforces", "1313D", "困难", ["dp-bitmask", "dp-subset"], ["扫描线", "超集转移", "局部轮廓"], "利用每点覆盖次数很小，把扫描线活跃区间压成局部掩码。"),
+  createDpProblem("n36", "classic", "CF1215E - Marbles", "https://codeforces.com/contest/1215/problem/E", "Codeforces", "1215E", "困难", ["dp-bitmask", "dp-subset"], ["逆序对贡献", "颜色排列", "子集 DP"], "预处理颜色两两顺序代价，把颜色排列的阶乘枚举压成子集 DP。"),
+  createDpProblem("n37", "classic", "ABC325 G - offence", "https://atcoder.jp/contests/abc325/tasks/abc325_g", "AtCoder", "ABC325 G", "中等", ["dp-interval"], ["字符串消除", "区间合并", "端点转移"], "按区间合并删除结果，是字符串消除类区间 DP 的清晰入门题。"),
+  createDpProblem("n38", "training", "CF1870E - Another MEX Problem", "https://codeforces.com/contest/1870/problem/E", "Codeforces", "1870E", "困难", ["dp-bitmask", "dp-subset"], ["MEX", "集合状态", "子集转移"], "把可出现的 MEX 集合压成状态，处理多段选择带来的集合变化。"),
+  createDpProblem("n39", "training", "CF1863F - Divide, XOR, and Conquer", "https://codeforces.com/contest/1863/problem/F", "Codeforces", "1863F", "困难", ["dp-interval"], ["XOR", "端点性质", "区间可达性"], "利用总 XOR 的最高位性质判断区间端点能否继续扩展。"),
+  createDpProblem("n40", "classic", "HDU4283 - You Are the One", "https://acm.hdu.edu.cn/showproblem.php?pid=4283", "HDU", "4283", "中等", ["dp-interval"], ["出栈顺序", "区间分割", "代价 DP"], "枚举首元素最终出现的位置，把左右部分拆成独立区间。"),
+  createDpProblem("n41", "classic", "CF1312E - Array Shrinking", "https://codeforces.com/contest/1312/problem/E", "Codeforces", "1312E", "中等", ["dp-interval"], ["区间合并", "两阶段 DP", "最少分段"], "先判断区间能否缩成一个值，再求覆盖整个数组的最少可缩区间数。"),
+  createDpProblem("n43", "classic", "POJ1390 - Blocks", "http://poj.org/problem?id=1390", "POJ", "1390", "困难", ["dp-interval"], ["附加维状态", "方块消除", "同色合并"], "用额外维记录右侧已连接的同色块数量，是消除类区间 DP 的代表状态。"),
+  createDpProblem("n44", "training", "2020 Wannafly Winter Camp Day6 D - 递增递增", "https://ac.nowcoder.com/acm/problem/201932", "牛客", "NC201932", "困难", ["dp-interval"], ["填坑 DP", "组合计数", "非标准区间状态"], "围绕区间中的空位和递增约束设计填坑状态，适合作为非模板训练。"),
+  createDpProblem("n45", "training", "CF1101F - Trucks and Cities", "https://codeforces.com/contest/1101/problem/F", "Codeforces", "1101F", "困难", ["dp-linear"], ["分段 DP", "分治优化", "二分答案"], "二分限制后做分段 DP，并利用决策单调性优化转移。"),
+  createDpProblem("n46", "training", "CF1628D2 - Game on Sum", "https://codeforces.com/contest/1628/problem/D2", "Codeforces", "1628D2", "困难", ["dp-probability"], ["概率 DP", "逆向递推", "博弈过程"], "从终局逆推每一步的最优期望，状态小但概率转移很有启发性。"),
+  createDpProblem("n47", "training", "CF1823F - Random Walk", "https://codeforces.com/contest/1823/problem/F", "Codeforces", "1823F", "困难", ["dp-probability", "dp-tree"], ["随机游走", "树上期望", "概率递推"], "在树上递推随机游走的访问期望，是概率与树形 DP 的交叉题。"),
+  createDpProblem("n48", "training", "CF1753C - Wish I Knew How to Sort", "https://codeforces.com/contest/1753/problem/C", "Codeforces", "1753C", "困难", ["dp-probability"], ["随机交换", "错位数量", "状态降维"], "把整个 01 排列压成错位数量，递推随机交换达到有序的期望步数。"),
+  createDpProblem("n50", "training", "CF1392H - ZS Shuffles Cards", "https://codeforces.com/contest/1392/problem/H", "Codeforces", "1392H", "困难", ["dp-probability"], ["随机过程", "期望贡献", "停止状态"], "拆分随机过程中的事件贡献，避免直接维护庞大排列状态。"),
+  createDpProblem("n52", "training", "CF2021D - Boss, Thirsty", "https://codeforces.com/contest/2021/problem/D", "Codeforces", "2021D", "困难", ["dp-linear"], ["前后缀最值", "区间端点状态", "增量维护"], "拆分左右端点的四类转移，并用前后缀最值消去枚举。"),
+  createDpProblem("n53", "training", "ARC115 E - LEQ and NEQ", "https://atcoder.jp/contests/arc115/tasks/arc115_e", "AtCoder", "ARC115 E", "困难", ["dp-linear"], ["容斥", "单调栈优化", "前缀和"], "从分段容斥 DP 出发，压缩奇偶维并用单调栈维护区间最小值贡献。"),
+  createDpProblem("n55", "training", "CF1856E2 - PermuTree (hard version)", "https://codeforces.com/contest/1856/problem/E2", "Codeforces", "1856E2", "困难", ["dp-tree", "dp-knapsack"], ["树形背包", "bitset", "根号优化"], "按子树大小做背包划分，再用 bitset 和根号思想控制总复杂度。"),
+  createDpProblem("n56", "classic", "ABC288 F - Integer Division", "https://atcoder.jp/contests/abc288/tasks/abc288_f", "AtCoder", "ABC288 F", "中等", ["dp-linear"], ["划分 DP", "贡献拆分", "前缀和优化"], "把最后一段数字拆成可递推贡献，将朴素二次转移降到线性。"),
+  createDpProblem("n57", "training", "力扣天池 04 - 意外惊喜", "https://leetcode.cn/contest/tianchi2022/problems/tRZfIV/", "LeetCode", "天池 04", "困难", ["dp-knapsack"], ["背包 DP", "分治优化", "构造"], "用分治组织物品范围，减少重复背包计算并恢复需要的选择。"),
+  createDpProblem("n58", "training", "CF1453F - Even Harder", "https://codeforces.com/contest/1453/problem/F", "Codeforces", "1453F", "困难", ["dp-linear"], ["路径唯一性", "后缀最小值", "状态推导"], "记录路径最后两个节点，并用后缀最小值维护合法前驱。"),
+  createDpProblem("n59", "training", "2019 牛客多校 10 J - Wood Processing", "https://ac.nowcoder.com/acm/contest/890/J", "牛客", "890 J", "困难", ["dp-linear"], ["分组 DP", "斜率优化", "凸包"], "排序后做连续分组，用斜率优化维护每层分组转移。"),
+  createDpProblem("n60", "classic", "CF868F - Yet Another Minimization Problem", "https://codeforces.com/contest/868/problem/F", "Codeforces", "868F", "困难", ["dp-linear"], ["分段 DP", "分治优化", "双指针维护代价"], "分治求每层最优决策，同时用双指针增删维护区间相等对数。"),
+  createDpProblem("n61", "classic", "ICPC Kunming 2021 C - Cities", "https://ac.nowcoder.com/acm/contest/12548/C", "牛客", "12548 C", "困难", ["dp-interval"], ["区间 DP", "分割", "端点决策"], "围绕区间端点和最后一次分割组织转移，具有明确的区间模型。"),
+  createDpProblem("n62", "training", "Nowcoder 91849 D - String Circle", "https://ac.nowcoder.com/acm/contest/91849/D", "牛客", "91849 D", "困难", ["dp-linear"], ["计数 DP", "KMP", "循环移位", "字符串周期"], "先识别每个串的合法旋转偏移，再统计非降切点序列。"),
+  createDpProblem("n63", "training", "CF2109E - Binary String Wowee", "https://codeforces.com/contest/2109/problem/E", "Codeforces", "2109E", "困难", ["dp-linear"], ["组合数学", "二进制串", "计数 DP"], "拆分二进制串中的组合贡献，用递推累计合法方案。"),
+  createDpProblem("n64", "classic", "CF659G - Fence Divercity", "https://codeforces.com/contest/659/problem/G", "Codeforces", "659G", "困难", ["dp-linear"], ["矩形计数", "前缀贡献", "滚动 DP"], "逐列维护以当前列结尾的连通矩形贡献，是简洁的线性计数 DP。"),
+  createDpProblem("n65", "training", "CF2038D - Divide OR Conquer", "https://codeforces.com/contest/2038/problem/D", "Codeforces", "2038D", "困难", ["dp-linear"], ["乱序 DP", "二维偏序", "遍历顺序"], "依据二维偏序安排状态遍历顺序，让依赖关系在乱序处理中仍保持可转移。"),
+  createDpProblem("n66", "training", "CF938F - Erasing Substrings", "https://codeforces.com/contest/938/problem/F", "Codeforces", "938F", "困难", ["dp-bitmask"], ["贪心", "状压 DP", "字符串删除"], "先用贪心性质限制仍需记忆的字符集合，再进行状态压缩转移。"),
+  createDpProblem("n67", "training", "CF1946F - Nobody is needed", "https://codeforces.com/contest/1946/problem/F", "Codeforces", "1946F", "困难", ["dp-linear"], ["离线", "刷表法", "Fenwick"], "将转移改成向未来状态刷表，并离线维护满足条件的贡献。"),
+  createDpProblem("n68", "training", "CF2237F - Paint the Array", "https://codeforces.com/contest/2237/problem/F", "Codeforces", "2237F", "困难", ["dp-linear"], ["数组染色", "状态压缩", "分类转移"], "围绕相邻染色关系压缩局部状态，按位置推进最优方案。"),
+  createDpProblem("n69", "training", "CF1832E - Combinatorics Problem", "https://codeforces.com/contest/1832/problem/E", "Codeforces", "1832E", "困难", ["dp-linear"], ["组合数递推", "多阶前缀和", "贡献计算"], "把组合恒等式转成多阶前缀和递推，在线性扫描中计算全部贡献。"),
+  createDpProblem("n70", "classic", "P5999 [CEOI 2016] kangaroo", "https://www.luogu.com.cn/problem/P5999", "洛谷", "P5999", "困难", ["dp-linear"], ["排列 DP", "插入法", "相邻关系"], "逐个插入数值并维护尚未闭合的相邻关系，与其他排列插入题形成完整链路。"),
+  createDpProblem("n71", "training", "CF2122E - Greedy Grid Counting", "https://codeforces.com/contest/2122/problem/E", "Codeforces", "2122E", "困难", ["dp-linear"], ["网格计数", "组合递推", "状态设计"], "把网格上的贪心过程抽象成可计数状态，逐阶段累积方案。"),
+  createDpProblem("n72", "training", "P3447 [POI 2006] KRY-Crystals", "https://www.luogu.com.cn/problem/P3447", "洛谷", "P3447", "困难", ["dp-digit"], ["数位 DP", "进制表示", "计数"], "按数位刻画晶体编号的结构约束，统计给定范围内的合法对象。"),
+  createDpProblem("n73", "classic", "CF1715E - Long Way Home", "https://codeforces.com/contest/1715/problem/E", "Codeforces", "1715E", "困难", ["dp-linear"], ["最短路分层", "斜率优化", "CHT"], "在每轮额外操作之间跑最短路，并用凸包优化跨点转移。"),
+  createDpProblem("n75", "classic", "ABC391 G - Many LCS", "https://atcoder.jp/contests/abc391/tasks/abc391_g", "AtCoder", "ABC391 G", "困难", ["dp-bitmask"], ["LCS 数组", "差分掩码", "自动机式转移"], "把一整行 LCS 的相邻差分压成掩码，在追加字符时做有限状态转移。"),
+  createDpProblem("n76", "training", "CF2039E - Shohag Loves Inversions", "https://codeforces.com/contest/2039/problem/E", "Codeforces", "2039E", "困难", ["dp-linear"], ["组合数学", "逆序对计数", "递推"], "按新增元素对逆序对的贡献建立组合递推。"),
+  createDpProblem("n77", "classic", "ABC231 G - Balls in Boxes", "https://atcoder.jp/contests/abc231/tasks/abc231_g", "AtCoder", "ABC231 G", "困难", ["dp-probability"], ["盒子模型", "组合期望", "概率 DP"], "围绕随机投球后的盒子占用状态计算期望，是标准概率 DP 模型。"),
+  createDpProblem("n79", "training", "HDU6289 - 寻宝游戏", "https://acm.hdu.edu.cn/showproblem.php?pid=6289", "HDU", "6289", "困难", ["dp-linear", "dp-knapsack"], ["网格 DP", "换入换出", "消除后效性", "背包倒序"], "分别记录换出和换入数量，使全局交换限制能在网格路径上局部转移。"),
+  createDpProblem("n80", "training", "CCPC Xiamen 2019 J - Zayin and Tree", "https://qoj.ac/problem/9110", "QOJ", "9110", "困难", ["dp-wrong-solutions", "dp-tree"], ["松弛", "错误复杂度分析", "错解改进", "树形 DP"], "复盘能通过但复杂度不优的松弛写法，并对照更稳健的树上 DP 改进。"),
+  createDpProblem("n81", "training", "CCPC Liaoning 2024 H - 划分数字", "https://codeforces.com/gym/105481/problem/H", "GYM", "105481H", "困难", ["dp-digit"], ["数位 DP", "数字划分", "计数"], "只收整篇补题中的 H，按数位状态统计数字划分方案。"),
+  createDpProblem("n82", "classic", "CF1778D - Flexible String Revisit", "https://codeforces.com/contest/1778/problem/D", "Codeforces", "1778D", "困难", ["dp-probability"], ["期望 DP", "距离状态", "手动高斯消元"], "递推式形成线性方程组，利用相邻状态关系手动消元求期望。")
+];
+
+const defaultDpProblems = [
+  {
+    id: "dp-c01-abc275-f",
+    title: "ABC275 F - Erase Subarrays",
+    url: "https://atcoder.jp/contests/abc275/tasks/abc275_f",
+    oj: "AtCoder",
+    problemId: "ABC275 F",
+    difficulty: "困难",
+    knowledge: ["dp-linear"],
+    techniques: ["分段状态", "前缀和", "最少操作"],
+    kind: "classic",
+    note: "把保留元素改写成分段状态，按目标和推进最少删除段数。"
+  },
+  {
+    id: "dp-c09-abc160-f",
+    title: "ABC160 F - Distributing Integers",
+    url: "https://atcoder.jp/contests/abc160/tasks/abc160_f",
+    oj: "AtCoder",
+    problemId: "ABC160 F",
+    difficulty: "困难",
+    knowledge: ["dp-tree"],
+    techniques: ["换根 DP", "组合计数", "子树合并"],
+    kind: "classic",
+    note: "树形组合计数配合换根，在线性时间内求出所有根的答案。"
+  },
+  {
+    id: "dp-t01-abc345-e",
+    title: "ABC345 E - Colorful Subsequence",
+    url: "https://atcoder.jp/contests/abc345/tasks/abc345_e",
+    oj: "AtCoder",
+    problemId: "ABC345 E",
+    difficulty: "困难",
+    knowledge: ["dp-linear"],
+    techniques: ["最优与次优", "滚动 DP", "状态降维"],
+    kind: "training",
+    note: "每个删除次数只保留颜色不同的前两优值，避免状态按颜色扩张。"
+  },
+  {
+    id: "dp-t02-abc227-e",
+    title: "ABC227 E - Swap",
+    url: "https://atcoder.jp/contests/abc227/tasks/abc227_e",
+    oj: "AtCoder",
+    problemId: "ABC227 E",
+    difficulty: "困难",
+    knowledge: ["dp-linear"],
+    techniques: ["多维 DP", "逆序对计数", "字符计数"],
+    kind: "training",
+    note: "记录已放置字符数量与交换代价，在有限预算内统计可达排列。"
+  },
+  {
+    id: "dp-t03-p1758",
+    title: "P1758 [NOI2009] 管道取珠",
+    url: "https://www.luogu.com.cn/problem/P1758",
+    oj: "洛谷",
+    problemId: "P1758",
+    difficulty: "困难",
+    knowledge: ["dp-linear"],
+    techniques: ["序列交错", "平方贡献", "滚动数组"],
+    kind: "training",
+    note: "将两次取珠过程并行建模，用四维状态累计相同结果的平方贡献。"
+  },
+  {
+    id: "dp-t04-hdu6092",
+    title: "HDU 6092 - Rikka with Subset",
+    url: "https://acm.hdu.edu.cn/showproblem.php?pid=6092",
+    oj: "HDU",
+    problemId: "6092",
+    difficulty: "中等",
+    knowledge: ["dp-knapsack"],
+    techniques: ["逆向背包", "子集和计数", "字典序构造"],
+    kind: "training",
+    note: "从子集和计数反推原多重集，利用背包转移逐项消去贡献。"
+  },
+  {
+    id: "dp-t05-nowcoder-81605-d",
+    title: "2024 牛客暑期多校训练营 10 D - Is it rated?",
+    url: "https://ac.nowcoder.com/acm/contest/81605/D",
+    oj: "牛客",
+    problemId: "81605 D",
+    difficulty: "困难",
+    knowledge: ["dp-knapsack"],
+    techniques: ["截断误差", "后缀 DP", "选择优化"],
+    kind: "training",
+    note: "只保留仍会影响精度的后缀，在跳过次数维度做选择 DP。"
+  },
+  {
+    id: "dp-t06-cf1336-c",
+    title: "CF1336C - Kaavi and Magic Spell",
+    url: "https://codeforces.com/contest/1336/problem/C",
+    oj: "Codeforces",
+    problemId: "1336C",
+    difficulty: "困难",
+    knowledge: ["dp-interval"],
+    techniques: ["区间构造", "端点转移", "字符串 DP"],
+    kind: "training",
+    note: "把字符从两端加入目标区间，以区间端点状态统计构造方案。"
+  },
+  {
+    id: "dp-t07-abc340-g",
+    title: "ABC340 G - Leaf Color",
+    url: "https://atcoder.jp/contests/abc340/tasks/abc340_g",
+    oj: "AtCoder",
+    problemId: "ABC340 G",
+    difficulty: "困难",
+    knowledge: ["dp-tree"],
+    techniques: ["树上计数", "贡献合并", "同色约束"],
+    kind: "training",
+    note: "围绕子树内同色叶子的贡献设计状态合并与重复计数修正。"
+  },
+  {
+    id: "dp-t08-gym104076-c",
+    title: "2022 ICPC 济南站 C - DFS Order 2",
+    url: "https://codeforces.com/problemset/gymProblem/104076/C",
+    oj: "GYM",
+    problemId: "104076C",
+    difficulty: "困难",
+    knowledge: ["dp-tree", "dp-knapsack"],
+    techniques: ["树形背包", "可撤销背包", "组合计数"],
+    kind: "training",
+    note: "树上每个节点做可撤销背包，统计目标儿子位于不同 DFS 次序位置的方案。"
+  },
+  {
+    id: "dp-t09-abc283-e",
+    title: "ABC283 E - Don't Isolate Elements",
+    url: "https://atcoder.jp/contests/abc283/tasks/abc283_e",
+    oj: "AtCoder",
+    problemId: "ABC283 E",
+    difficulty: "中等",
+    knowledge: ["dp-bitmask"],
+    techniques: ["轮廓状态", "逐行转移", "行翻转"],
+    kind: "training",
+    note: "只记录相邻三行的翻转状态，逐行保证中间行不出现孤立元素。"
+  },
+  {
+    id: "dp-t10-cf11-d",
+    title: "CF11D - A Simple Task",
+    url: "https://codeforces.com/contest/11/problem/D",
+    oj: "Codeforces",
+    problemId: "11D",
+    difficulty: "困难",
+    knowledge: ["dp-bitmask"],
+    techniques: ["子集状态", "最小点去重", "简单环计数"],
+    kind: "training",
+    note: "固定环上最小编号后做状态压缩 DP，避免同一无向简单环重复计数。"
+  },
+  {
+    id: "dp-t11-cf1209-e2",
+    title: "CF1209E2 - Rotate Columns (hard version)",
+    url: "https://codeforces.com/contest/1209/problem/E2",
+    oj: "Codeforces",
+    problemId: "1209E2",
+    difficulty: "困难",
+    knowledge: ["dp-bitmask", "dp-subset"],
+    techniques: ["子集 DP", "列旋转预处理", "子集划分"],
+    kind: "training",
+    note: "对每列预处理旋转后的子集最优值，再用子集划分 DP 合并列。"
+  },
+  {
+    id: "dp-t12-arc100-e",
+    title: "ARC100 E - Or Plus Max",
+    url: "https://atcoder.jp/contests/arc100/tasks/arc100_c",
+    oj: "AtCoder",
+    problemId: "ARC100 E",
+    difficulty: "困难",
+    knowledge: ["dp-bitmask", "dp-sos"],
+    techniques: ["SOS DP", "高维前缀和", "子集 Top-2"],
+    kind: "training",
+    note: "对子集维护最大两项并做 SOS 转移，最后取前缀最大答案。"
+  },
+  {
+    id: "dp-digit-hdu3652",
+    title: "HDU 3652 - B-number",
+    url: "https://acm.hdu.edu.cn/showproblem.php?pid=3652",
+    oj: "HDU",
+    problemId: "3652",
+    difficulty: "中等",
+    knowledge: ["dp-digit"],
+    techniques: ["数位自动机", "余数状态", "前缀统计"],
+    kind: "classic",
+    note: "把是否出现 13 做成自动机状态，并同时维护模 13 的余数。"
+  },
+  {
+    id: "dp-digit-cf55-d",
+    title: "CF55D - Beautiful numbers",
+    url: "https://codeforces.com/contest/55/problem/D",
+    oj: "Codeforces",
+    problemId: "55D",
+    difficulty: "困难",
+    knowledge: ["dp-digit"],
+    techniques: ["LCM 状态", "余数压缩", "记忆化搜索"],
+    kind: "classic",
+    note: "用非零数位的最小公倍数压缩整除条件，再做数位 DP。"
+  },
+  {
+    id: "dp-digit-probability-cf54-c",
+    title: "CF54C - First Digit Law",
+    url: "https://codeforces.com/contest/54/problem/C",
+    oj: "Codeforces",
+    problemId: "54C",
+    difficulty: "困难",
+    knowledge: ["dp-digit", "dp-probability"],
+    techniques: ["数位统计", "概率 DP", "Benford 定律"],
+    kind: "classic",
+    note: "先统计每个区间以 1 开头的概率，再做独立事件的计数 DP。"
+  },
+  {
+    id: "dp-digit-hdu4352",
+    title: "HDU 4352 - XHXJ's LIS",
+    url: "https://acm.hdu.edu.cn/showproblem.php?pid=4352",
+    oj: "HDU",
+    problemId: "4352",
+    difficulty: "困难",
+    knowledge: ["dp-digit", "dp-bitmask"],
+    techniques: ["LIS 状态", "按位压缩", "数位 DP"],
+    kind: "training",
+    note: "用耐心排序的掩码表示当前 LIS 状态，将序列信息塞进数位 DP。"
+  },
+  {
+    id: "dp-probability-cf167-b",
+    title: "CF167B - Wizards and Huge Prize",
+    url: "https://codeforces.com/contest/167/problem/B",
+    oj: "Codeforces",
+    problemId: "167B",
+    difficulty: "中等",
+    knowledge: ["dp-probability", "dp-knapsack"],
+    techniques: ["概率 DP", "容量状态", "独立事件"],
+    kind: "classic",
+    note: "以胜场数和背包剩余容量为状态，累加独立事件概率。"
+  },
+  {
+    id: "dp-probability-cf280-c",
+    title: "CF280C - Game on Tree",
+    url: "https://codeforces.com/contest/280/problem/C",
+    oj: "Codeforces",
+    problemId: "280C",
+    difficulty: "中等",
+    knowledge: ["dp-probability"],
+    techniques: ["期望线性性", "指示变量", "树上贡献"],
+    kind: "classic",
+    note: "把每个点被直接删除的指示变量拆开，用期望线性性按深度求和。"
+  },
+  {
+    id: "dp-probability-cf1540-b",
+    title: "CF1540B - Tree Array",
+    url: "https://codeforces.com/contest/1540/problem/B",
+    oj: "Codeforces",
+    problemId: "1540B",
+    difficulty: "困难",
+    knowledge: ["dp-probability", "dp-tree"],
+    techniques: ["树上概率 DP", "点对贡献", "期望逆序对"],
+    kind: "training",
+    note: "枚举根与点对，在树上递推两点先后被加入的概率。"
+  },
+  ...reviewedDpProblems
+];
+
+const dpProblemRatings = [
+  ["dp-c01-abc275-f", 1608, "AtCoder Problems"],
+  ["dp-c09-abc160-f", 2048, "AtCoder Problems"],
+  ["dp-t01-abc345-e", 2356, "AtCoder Problems"],
+  ["dp-t02-abc227-e", 2377, "AtCoder Problems"],
+  ["dp-t03-p1758", 6, "洛谷", "省选/NOI−"],
+  ["dp-t06-cf1336-c", 2200, "Codeforces"],
+  ["dp-t07-abc340-g", 2401, "AtCoder Problems"],
+  ["dp-t09-abc283-e", 1802, "AtCoder Problems"],
+  ["dp-t10-cf11-d", 2200, "Codeforces"],
+  ["dp-t11-cf1209-e2", 2500, "Codeforces"],
+  ["dp-t12-arc100-e", 2111, "AtCoder Problems"],
+  ["dp-digit-cf55-d", 2500, "Codeforces"],
+  ["dp-digit-probability-cf54-c", 2000, "Codeforces"],
+  ["dp-probability-cf167-b", 1800, "Codeforces"],
+  ["dp-probability-cf280-c", 2200, "Codeforces"],
+  ["dp-probability-cf1540-b", 2300, "Codeforces"],
+  ["dp-n01", 2028, "AtCoder Problems"],
+  ["dp-n02", 2793, "AtCoder Problems"],
+  ["dp-n03", 2100, "Codeforces"],
+  ["dp-n04", 2200, "Codeforces"],
+  ["dp-n05", 2349, "AtCoder Problems"],
+  ["dp-n08", 1963, "AtCoder Problems"],
+  ["dp-n09", 2431, "AtCoder Problems"],
+  ["dp-n10", 2400, "Codeforces"],
+  ["dp-n11", 2400, "Codeforces"],
+  ["dp-n12", 2700, "Codeforces"],
+  ["dp-n13", 2532, "AtCoder Problems"],
+  ["dp-n19", 2200, "Codeforces"],
+  ["dp-n20", 2200, "Codeforces"],
+  ["dp-n22", 2300, "Codeforces"],
+  ["dp-n24", 2500, "Codeforces"],
+  ["dp-n25", 2900, "Codeforces"],
+  ["dp-n27", 2400, "Codeforces"],
+  ["dp-n30", 2300, "Codeforces"],
+  ["dp-n34", 2900, "Codeforces"],
+  ["dp-n35", 2500, "Codeforces"],
+  ["dp-n36", 2200, "Codeforces"],
+  ["dp-n37", 2388, "AtCoder Problems"],
+  ["dp-n38", 2300, "Codeforces"],
+  ["dp-n39", 2600, "Codeforces"],
+  ["dp-n41", 2100, "Codeforces"],
+  ["dp-n45", 2400, "Codeforces"],
+  ["dp-n46", 2400, "Codeforces"],
+  ["dp-n47", 2600, "Codeforces"],
+  ["dp-n48", 2000, "Codeforces"],
+  ["dp-n50", 3000, "Codeforces"],
+  ["dp-n52", 2500, "Codeforces"],
+  ["dp-n53", 2363, "AtCoder Problems"],
+  ["dp-n55", 2700, "Codeforces"],
+  ["dp-n56", 2024, "AtCoder Problems"],
+  ["dp-n58", 2700, "Codeforces"],
+  ["dp-n60", 2500, "Codeforces"],
+  ["dp-n63", 2400, "Codeforces"],
+  ["dp-n64", 2300, "Codeforces"],
+  ["dp-n65", 2400, "Codeforces"],
+  ["dp-n66", 2700, "Codeforces"],
+  ["dp-n67", 2500, "Codeforces"],
+  ["dp-n68", 2400, "Codeforces"],
+  ["dp-n69", 2200, "Codeforces"],
+  ["dp-n70", 6, "洛谷", "省选/NOI−"],
+  ["dp-n71", 2600, "Codeforces"],
+  ["dp-n72", 7, "洛谷", "NOI/NOI+/CTSC"],
+  ["dp-n73", 2400, "Codeforces"],
+  ["dp-n75", 2247, "AtCoder Problems"],
+  ["dp-n76", 2200, "Codeforces"],
+  ["dp-n77", 2606, "AtCoder Problems"],
+  ["dp-n82", 2100, "Codeforces"]
+];
+
+function difficultyFromRating(rating, source) {
+  if (source === "Codeforces") return rating < 1600 ? "简单" : rating < 2200 ? "中等" : "困难";
+  if (source === "AtCoder Problems") return rating < 1200 ? "简单" : rating < 2000 ? "中等" : "困难";
+  if (source === "洛谷") return rating <= 2 ? "简单" : rating <= 4 ? "中等" : "困难";
+  return null;
+}
+
+for (const [id, rating, ratingSource, ratingLabel] of dpProblemRatings) {
+  const problem = defaultDpProblems.find((item) => item.id === id);
+  if (!problem) continue;
+  problem.rating = rating;
+  problem.ratingSource = ratingSource;
+  problem.ratingLabel = ratingLabel || "";
+  problem.difficulty = difficultyFromRating(rating, ratingSource) || problem.difficulty;
+}
 
 const seedData = {
   schemaVersion: CATALOG_SCHEMA_VERSION,
@@ -99,9 +541,10 @@ const seedData = {
         outline: ["明确局部选择", "尝试交换论证", "确认子问题结构"]
       }
     },
-    ...defaultDpSubtopics
+    ...defaultDpSubtopics,
+    ...defaultDpCustomTopics
   ],
-  problems: [],
+  problems: structuredClone(defaultDpProblems),
   contests: []
 };
 
@@ -131,7 +574,8 @@ const state = {
   editingId: null,
   modalContext: {},
   expandedTopics: new Set(["dp"]),
-  lessonExpanded: false
+  lessonExpanded: false,
+  revealedRatingId: null
 };
 
 const cloud = {
@@ -238,6 +682,81 @@ function wasCompletedThisWeek(problem, now = new Date()) {
   return completed >= weekStart && completed <= now;
 }
 
+function normalizedCatalogName(value = "") {
+  return String(value).trim().toLowerCase().replace(/[\s（）()_-]+/g, "");
+}
+
+function normalizedProblemUrl(value = "") {
+  try {
+    const url = new URL(String(value).trim());
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    const path = url.pathname.replace(/\/+$/, "").toLowerCase();
+    const codeforcesProblem = path.match(/^\/(?:contest|problemset\/problem)\/(\d+)\/(?:problem\/)?([^/]+)$/);
+    if (host === "codeforces.com" && codeforcesProblem) {
+      return `codeforces:${codeforcesProblem[1]}:${codeforcesProblem[2]}`;
+    }
+    const codeforcesGym = path.match(/^\/(?:gym\/(\d+)\/problem|problemset\/gymproblem\/(\d+))\/([^/]+)$/);
+    if (host === "codeforces.com" && codeforcesGym) {
+      return `codeforces-gym:${codeforcesGym[1] || codeforcesGym[2]}:${codeforcesGym[3]}`;
+    }
+    const atcoderProblem = path.match(/^\/contests\/([^/]+)\/tasks\/([^/]+)$/);
+    if (host === "atcoder.jp" && atcoderProblem) return `atcoder:${atcoderProblem[2]}`;
+    const nowcoderProblem = path.match(/^\/acm\/(contest\/[^/]+\/[^/]+|problem\/[^/]+)$/);
+    if (host === "ac.nowcoder.com" && nowcoderProblem) return `nowcoder:${nowcoderProblem[1]}`;
+    if (host === "acm.hdu.edu.cn" && url.searchParams.get("pid")) return `hdu:${url.searchParams.get("pid")}`;
+    const luoguProblem = path.match(/^\/problem\/([^/]+)$/);
+    if (host === "luogu.com.cn" && luoguProblem) return `luogu:${luoguProblem[1]}`;
+    const qojProblem = path.match(/^\/problem\/(\d+)$/);
+    if (host === "qoj.ac" && qojProblem) return `qoj:${qojProblem[1]}`;
+    url.hash = "";
+    url.searchParams.sort();
+    return `${host}${path}${url.search}`;
+  } catch {
+    return String(value).trim().toLowerCase().replace(/\/+$/, "");
+  }
+}
+
+function normalizedProblemSource(problem) {
+  const oj = normalizedCatalogName(problem.oj);
+  let problemId = normalizedCatalogName(problem.problemId);
+  if (oj === "codeforces") problemId = problemId.replace(/^cf/, "");
+  return oj && problemId ? `${oj}:${problemId}` : "";
+}
+
+function mergeProblemRecord(target, incoming) {
+  target.knowledge = [...new Set([...(target.knowledge || []), ...(incoming.knowledge || [])])];
+  target.techniques = [...new Set([...(target.techniques || []), ...(incoming.techniques || [])])];
+  for (const field of ["title", "url", "oj", "problemId", "difficulty", "kind", "note", "rating", "ratingLabel", "ratingSource"]) {
+    if ((target[field] === undefined || target[field] === null || target[field] === "") && incoming[field] !== undefined) {
+      target[field] = incoming[field];
+    }
+  }
+  if (/blog\.csdn\.net|zhuanlan\.zhihu\.com/.test(String(target.url || ""))) target.url = incoming.url || target.url;
+}
+
+function mergeDuplicateProblems(problems) {
+  const merged = [];
+  const identities = new Map();
+  for (const problem of problems) {
+    const keys = [
+      problem.id ? `id:${problem.id}` : "",
+      problem.url ? `url:${normalizedProblemUrl(problem.url)}` : "",
+      normalizedProblemSource(problem) ? `source:${normalizedProblemSource(problem)}` : ""
+    ].filter(Boolean);
+    const existing = keys.map((key) => identities.get(key)).find(Boolean);
+    if (existing) {
+      const notes = [existing.note, problem.note].map((note) => String(note || "").trim()).filter(Boolean);
+      mergeProblemRecord(existing, problem);
+      if (notes.length === 2 && notes[0] !== notes[1]) existing.note = [...new Set(notes)].join("；");
+      for (const key of keys) identities.set(key, existing);
+      continue;
+    }
+    merged.push(problem);
+    for (const key of keys) identities.set(key, problem);
+  }
+  return merged;
+}
+
 function migrateCatalog(data) {
   const migrated = structuredClone(data);
   migrated.problems = Array.isArray(migrated.problems)
@@ -252,15 +771,67 @@ function migrateCatalog(data) {
     parentId: topic.parentId || null,
     group: topic.parentId ? (topic.group || "standard") : "root"
   }));
-  if ((Number(migrated.schemaVersion) || 1) < CATALOG_SCHEMA_VERSION) {
-    for (const subtopic of defaultDpSubtopics) {
-      if (!migrated.topics.some((topic) => topic.id === subtopic.id)) migrated.topics.push(structuredClone(subtopic));
-    }
-  }
   migrated.problems = migrated.problems.map((problem) => ({
     ...problem,
+    knowledge: Array.isArray(problem.knowledge) ? problem.knowledge : [],
     techniques: Array.isArray(problem.techniques) ? problem.techniques : []
   }));
+
+  const topicIdAliases = new Map();
+  for (const defaultTopic of [...defaultDpSubtopics, ...defaultDpCustomTopics]) {
+    const existing = migrated.topics.find((topic) => (
+      topic.id === defaultTopic.id
+      || (topic.parentId === defaultTopic.parentId && normalizedCatalogName(topic.name) === normalizedCatalogName(defaultTopic.name))
+    ));
+    if (!existing) {
+      const added = structuredClone(defaultTopic);
+      migrated.topics.push(added);
+      topicIdAliases.set(defaultTopic.id, added.id);
+      continue;
+    }
+    topicIdAliases.set(defaultTopic.id, existing.id);
+    existing.description ||= defaultTopic.description;
+    existing.color ||= defaultTopic.color;
+    existing.group ||= defaultTopic.group;
+    existing.article ||= structuredClone(defaultTopic.article);
+  }
+
+  const wrongSolutionsId = topicIdAliases.get("dp-wrong-solutions") || "dp-wrong-solutions";
+  const redundantOptimizationIds = new Set(migrated.topics
+    .filter((topic) => topic.parentId === "dp"
+      && topic.id !== wrongSolutionsId
+      && ["dp优化", "dp优化松弛"].includes(normalizedCatalogName(topic.name)))
+    .map((topic) => topic.id));
+  if (redundantOptimizationIds.size) {
+    for (const problem of migrated.problems) {
+      problem.knowledge = [...new Set(problem.knowledge.map((id) => redundantOptimizationIds.has(id) ? wrongSolutionsId : id))];
+    }
+    migrated.topics = migrated.topics.filter((topic) => !redundantOptimizationIds.has(topic.id));
+  }
+
+  migrated.problems = mergeDuplicateProblems(migrated.problems);
+  for (const defaultProblem of defaultDpProblems) {
+    const candidate = structuredClone(defaultProblem);
+    candidate.knowledge = candidate.knowledge.map((id) => topicIdAliases.get(id) || id);
+    const normalizedUrl = normalizedProblemUrl(candidate.url);
+    const normalizedSource = normalizedProblemSource(candidate);
+    const existing = migrated.problems.find((problem) => (
+      problem.id === candidate.id
+      || normalizedProblemUrl(problem.url) === normalizedUrl
+      || (normalizedSource && normalizedProblemSource(problem) === normalizedSource)
+    ));
+    if (!existing) migrated.problems.push(candidate);
+    else {
+      mergeProblemRecord(existing, candidate);
+      if (candidate.rating !== undefined) {
+        existing.rating = candidate.rating;
+        existing.ratingSource = candidate.ratingSource;
+        existing.ratingLabel = candidate.ratingLabel || "";
+        existing.difficulty = candidate.difficulty;
+      }
+    }
+  }
+  migrated.problems = mergeDuplicateProblems(migrated.problems);
   migrated.schemaVersion = CATALOG_SCHEMA_VERSION;
   return migrated;
 }
@@ -625,6 +1196,27 @@ function renderTechniqueTags(tags = [], max = tags.length) {
   return tags.slice(0, max).map((tag) => `<button class="technique-tag" data-technique="${escapeHtml(tag)}" title="按技巧检索"># ${escapeHtml(tag)}</button>`).join("");
 }
 
+function problemRatingText(problem) {
+  if (problem.rating === undefined || problem.rating === null || !problem.ratingSource) return "";
+  if (problem.ratingSource === "洛谷") return `洛谷 · ${problem.ratingLabel || problem.rating}`;
+  if (problem.ratingSource === "AtCoder Problems") return `AtCoder · ${problem.rating}`;
+  if (problem.ratingSource === "Codeforces") return `CF · ${problem.rating}`;
+  return `${problem.ratingSource} · ${problem.ratingLabel || problem.rating}`;
+}
+
+function renderRatingDisclosure(problem) {
+  const ratingText = problemRatingText(problem);
+  if (!ratingText) return "";
+  const visible = state.revealedRatingId === problem.id;
+  return `
+    <span class="rating-disclosure">
+      <button class="rating-toggle ${visible ? "is-visible" : ""}" type="button" data-toggle-rating="${escapeHtml(problem.id)}" aria-expanded="${visible}" aria-label="${visible ? "隐藏" : "查看"}${escapeHtml(problem.title)}的难度分" title="${visible ? "隐藏难度分" : "查看难度分"}">
+        <i data-lucide="${visible ? "eye-off" : "eye"}"></i>
+      </button>
+      <span class="rating-value ${visible ? "is-visible" : ""}" role="status">${escapeHtml(ratingText)}</span>
+    </span>`;
+}
+
 function renderEntryActions(type, id, label) {
   return `
     <div class="entry-actions">
@@ -644,6 +1236,7 @@ function renderProblemCard(problem) {
         ${ojMark(problem.oj)}
         <div class="card-head-actions">
           <span class="difficulty ${difficultyClass(problem.difficulty)}">${escapeHtml(problem.difficulty)}</span>
+          ${renderRatingDisclosure(problem)}
           ${renderEntryActions("problem", problem.id, problem.title)}
         </div>
       </div>
@@ -775,7 +1368,7 @@ function renderKnowledge() {
                   <tr>
                     <td><button class="status-check ${isProblemDone(problem) ? "is-done" : ""}" data-toggle-done="${problem.id}" aria-label="${isProblemDone(problem) ? "标记为未完成" : "标记为已完成"}" title="${isProblemDone(problem) ? "已完成" : "未完成"}"><i data-lucide="check"></i></button></td>
                     <td><div class="table-title">${ojMark(problem.oj)}<div><a href="${escapeHtml(problem.url)}" target="_blank" rel="noreferrer">${escapeHtml(problem.title)}</a><div class="problem-id">${escapeHtml(problem.problemId || problem.oj)}</div></div></div></td>
-                    <td><span class="difficulty ${difficultyClass(problem.difficulty)}">${escapeHtml(problem.difficulty)}</span></td>
+                    <td><div class="difficulty-cell"><span class="difficulty ${difficultyClass(problem.difficulty)}">${escapeHtml(problem.difficulty)}</span>${renderRatingDisclosure(problem)}</div></td>
                     <td><div class="table-tags">${renderTags(problem.knowledge, 2)}</div></td>
                     <td class="problem-note">${problem.note ? `<span>${escapeHtml(problem.note)}</span>` : ""}${problem.techniques?.length ? `<div class="table-techniques">${renderTechniqueTags(problem.techniques, 2)}</div>` : ""}</td>
                     <td class="table-actions">${renderEntryActions("problem", problem.id, problem.title)}</td>
@@ -966,6 +1559,7 @@ function getFormFields(type) {
     const problem = state.data.problems.find((item) => item.id === state.editingId);
     const difficulty = problem?.difficulty || "中等";
     const kind = problem?.kind || state.modalContext.kind || "classic";
+    const ratingSource = problem?.ratingSource || "";
     return `
       <label class="field"><span>题目名称</span><input name="title" required value="${escapeHtml(problem?.title || "")}" placeholder="例如：单源最短路径（标准版）" /></label>
       <label class="field"><span>题目链接</span><input name="url" type="url" required value="${escapeHtml(problem?.url || "")}" placeholder="https://..." /><small>支持任意在线评测网站的完整链接</small></label>
@@ -977,6 +1571,11 @@ function getFormFields(type) {
         <label class="field"><span>难度</span><select name="difficulty">${["简单", "中等", "困难"].map((item) => `<option ${item === difficulty ? "selected" : ""}>${item}</option>`).join("")}</select></label>
         <fieldset class="field"><legend>所在区域</legend><div class="radio-row"><label class="radio-option"><input type="radio" name="kind" value="classic" ${kind === "classic" ? "checked" : ""} />经典例题</label><label class="radio-option"><input type="radio" name="kind" value="training" ${kind === "training" ? "checked" : ""} />实战训练</label></div></fieldset>
       </div>
+      <div class="form-row">
+        <label class="field"><span>难度分</span><input name="rating" type="number" min="0" step="1" value="${escapeHtml(problem?.rating ?? "")}" placeholder="无数据可留空" /><small>保存后默认隐藏，由用户主动查看</small></label>
+        <label class="field"><span>评分来源</span><select name="ratingSource"><option value="">无</option>${["Codeforces", "AtCoder Problems", "洛谷"].map((item) => `<option value="${item}" ${item === ratingSource ? "selected" : ""}>${item}</option>`).join("")}</select></label>
+      </div>
+      <label class="field"><span>等级名称</span><input name="ratingLabel" value="${escapeHtml(problem?.ratingLabel || "")}" placeholder="洛谷可填写：省选/NOI−" /><small>数字评分平台可留空</small></label>
       <fieldset class="field"><legend>知识点（可多选）</legend><div class="checkbox-grid">${topicCheckboxes(problem?.knowledge || [state.topicId])}</div></fieldset>
       <label class="field"><span>技巧标签</span><input name="techniques" value="${escapeHtml(problem?.techniques?.join("，") || "")}" placeholder="Top-k 转恰选 k 个，等价转化，状态降维" /><small>描述这道题具体值得复用的技巧，使用逗号分隔</small></label>
       <label class="field"><span>备注</span><textarea name="note" placeholder="这道题值得收录的原因、关键思路或易错点">${escapeHtml(problem?.note || "")}</textarea></label>`;
@@ -1113,13 +1712,19 @@ async function handleSubmit(event) {
       return;
     }
     const existing = state.data.problems.find((problem) => problem.id === state.editingId);
+    const ratingValue = form.get("rating").trim();
+    const rating = ratingValue === "" ? null : Number(ratingValue);
+    const ratingSource = form.get("ratingSource");
     const problem = {
       id: existing?.id || `p-${Date.now()}`,
       title: form.get("title").trim(),
       url: form.get("url").trim(),
       oj: form.get("oj").trim(),
       problemId: form.get("problemId").trim(),
-      difficulty: form.get("difficulty"),
+      difficulty: Number.isFinite(rating) && ratingSource ? (difficultyFromRating(rating, ratingSource) || form.get("difficulty")) : form.get("difficulty"),
+      rating: Number.isFinite(rating) ? rating : null,
+      ratingSource: Number.isFinite(rating) ? ratingSource : "",
+      ratingLabel: Number.isFinite(rating) ? form.get("ratingLabel").trim() : "",
       knowledge,
       techniques: form.get("techniques").split(/[，,]/).map((tag) => tag.trim()).filter(Boolean),
       kind: form.get("kind"),
@@ -1235,6 +1840,7 @@ document.addEventListener("click", async (event) => {
     state.query = "";
     state.difficulty = "全部";
     state.lessonExpanded = false;
+    state.revealedRatingId = null;
     els.globalSearch.value = "";
     closeSidebar();
     render();
@@ -1278,6 +1884,14 @@ document.addEventListener("click", async (event) => {
   const difficultyButton = event.target.closest("[data-difficulty]");
   if (difficultyButton) {
     state.difficulty = difficultyButton.dataset.difficulty;
+    renderKnowledge();
+    renderIcons();
+  }
+
+  const ratingButton = event.target.closest("[data-toggle-rating]");
+  if (ratingButton) {
+    const id = ratingButton.dataset.toggleRating;
+    state.revealedRatingId = state.revealedRatingId === id ? null : id;
     renderKnowledge();
     renderIcons();
   }
