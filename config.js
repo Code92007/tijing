@@ -1,4 +1,5 @@
 window.TIJING_CONFIG = {
   supabaseUrl: "",
-  supabasePublishableKey: ""
+  supabasePublishableKey: "",
+  problemSummaryApiUrl: "https://tijing.wannafly.cn/api/problem-summary"
 };

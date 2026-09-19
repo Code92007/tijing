@@ -3,7 +3,8 @@
 面向算法竞赛学习的题单、教学内容与比赛收藏网站。
 
 - 前端：纯 HTML/CSS/JavaScript，可同时部署到 GitHub Pages 和自己的 Caddy。
-- 题单：支持一级知识点、标准/自定义子专题、多知识点归类和可检索的技巧标签。
+- 题单：支持一级知识点、标准/自定义子专题、多知识点归类、精简题意和可检索的技巧标签。
+- 题意提取：服务端读取常见 OJ 题面，并通过 OpenAI 兼容模型生成不含解法的中文短摘要。
 - 主数据：Supabase Postgres 中的单一、带版本号 JSONB 文档。
 - 权限：所有访问者可读，只有 `catalog_admins` 中的 Supabase 用户可写。
 - 同步：Supabase Realtime 在不同域名和设备间推送最新版本。
@@ -19,7 +20,8 @@
 ```js
 window.TIJING_CONFIG = {
   supabaseUrl: "https://YOUR_PROJECT.supabase.co",
-  supabasePublishableKey: "YOUR_PUBLISHABLE_KEY"
+  supabasePublishableKey: "YOUR_PUBLISHABLE_KEY",
+  problemSummaryApiUrl: "https://tijing.wannafly.cn/api/problem-summary"
 };
 ```
 
@@ -95,7 +97,53 @@ systemctl reload caddy
 
 Caddy 只发布 `/root/tijing/public` 中的 `index.html`、`styles.css`、`app.js`、`config.js` 和 `.nojekyll`，不会暴露仓库根目录、数据库脚本或备份工作流。由于服务器全局关闭了 Caddy 的 HTTP 重定向，正式入口使用 `https://tijing.wannafly.cn/`。
 
-## 5. GitHub 自动备份
+## 5. 配置题意提取
+
+题意提取服务运行在服务器 `127.0.0.1:8787`，Caddy 将 `/api/problem-summary` 转发给它。模型服务需要兼容 `/chat/completions`；可使用 DeepSeek、OpenAI 或其他兼容服务。
+
+服务器需要 Node.js 18 或更高版本。当前 Ubuntu 24.04 的系统源可直接安装：
+
+```bash
+apt-get update
+apt-get install -y nodejs
+node --version
+```
+
+在服务器上创建仅 root 可读的环境文件：
+
+```bash
+cd /root/tijing
+install -m 0600 deploy/tijing-summary.env.example /etc/tijing-summary.env
+nano /etc/tijing-summary.env
+```
+
+至少填写 `TIJING_LLM_BASE_URL`、`TIJING_LLM_API_KEY` 和 `TIJING_LLM_MODEL`。不要把真实密钥写入仓库或 `config.js`。
+
+安装并启动服务：
+
+```bash
+install -m 0644 deploy/tijing-summary.service /etc/systemd/system/tijing-summary.service
+systemctl daemon-reload
+systemctl enable --now tijing-summary
+curl -s http://127.0.0.1:8787/health
+
+install -m 0644 deploy/Caddyfile.tijing /etc/caddy/sites/tijing.caddy
+caddy validate --config /etc/caddy/Caddyfile
+systemctl reload caddy
+```
+
+默认每个来源 IP 每 10 分钟最多提取 12 次，只允许仓库内列出的常见 OJ 域名。若同时设置 `TIJING_SUPABASE_URL` 和 `TIJING_SUPABASE_PUBLISHABLE_KEY`，接口还会要求调用者先登录 Supabase。
+
+之后更新代码时重启摘要服务：
+
+```bash
+cd /root/tijing
+git pull --ff-only
+./deploy/publish.sh
+systemctl restart tijing-summary
+```
+
+## 6. GitHub 自动备份
 
 在 GitHub 仓库 Settings > Secrets and variables > Actions 添加：
 
@@ -120,7 +168,7 @@ gh workflow run backup.yml --repo Code92007/tijing
 - `backups/catalog.json`：机器可读的完整快照。
 - `backups/catalog.md`：可直接阅读，并内嵌同一份可恢复 JSON。
 
-## 6. 恢复
+## 7. 恢复
 
 推荐在 GitHub Actions 中手动运行 `Restore catalog`：
 
