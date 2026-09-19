@@ -1,5 +1,6 @@
 const STORAGE_KEY = "tijing-data-v5";
 const PENDING_KEY = "tijing-pending-sync-v1";
+const PROGRESS_KEY = "tijing-progress-v1";
 const PRESET_PROBLEM_IDS = new Set(["p4", "p5", "p6", "p8"]);
 const PRESET_CONTEST_IDS = new Set(["c1", "c2", "c3", "c4"]);
 const CATALOG_SCHEMA_VERSION = 2;
@@ -117,8 +118,11 @@ const ojStyles = {
   其他: { short: "OJ", color: "#5d665f", bg: "#eceeeb" }
 };
 
+const initialData = loadData();
+
 const state = {
-  data: loadData(),
+  data: initialData,
+  progress: loadProgress(initialData),
   route: "knowledge",
   topicId: "graph",
   query: "",
@@ -179,6 +183,59 @@ function loadData() {
   } catch {
     return structuredClone(seedData);
   }
+}
+
+function loadProgress(catalog) {
+  let progress = { completed: {} };
+  let hasSavedProgress = false;
+  try {
+    const saved = JSON.parse(localStorage.getItem(PROGRESS_KEY));
+    if (saved && typeof saved.completed === "object") {
+      progress = { completed: saved.completed };
+      hasSavedProgress = true;
+    }
+  } catch {
+    // Fall back to an empty local profile.
+  }
+  if (!hasSavedProgress) {
+    for (const problem of catalog.problems || []) {
+      if (problem.done === true) progress.completed[problem.id] = "legacy";
+    }
+  }
+  const catalogChanged = stripSharedProgress(catalog);
+  if (!hasSavedProgress) localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+  if (catalogChanged) localStorage.setItem(STORAGE_KEY, JSON.stringify(catalog));
+  return progress;
+}
+
+function stripSharedProgress(catalog) {
+  let changed = false;
+  for (const problem of catalog.problems || []) {
+    if (!Object.hasOwn(problem, "done")) continue;
+    delete problem.done;
+    changed = true;
+  }
+  return changed;
+}
+
+function saveProgress() {
+  localStorage.setItem(PROGRESS_KEY, JSON.stringify(state.progress));
+}
+
+function isProblemDone(problem) {
+  return Object.hasOwn(state.progress.completed, problem.id);
+}
+
+function wasCompletedThisWeek(problem, now = new Date()) {
+  const completedAt = state.progress.completed[problem.id];
+  if (!completedAt || completedAt === "legacy") return false;
+  const completed = new Date(completedAt);
+  if (Number.isNaN(completed.getTime())) return false;
+  const weekStart = new Date(now);
+  const daysSinceMonday = (weekStart.getDay() + 6) % 7;
+  weekStart.setDate(weekStart.getDate() - daysSinceMonday);
+  weekStart.setHours(0, 0, 0, 0);
+  return completed >= weekStart && completed <= now;
 }
 
 function migrateCatalog(data) {
@@ -304,6 +361,7 @@ async function loadRemoteData({ silent = false } = {}) {
   const remote = result.data;
   if (pending) {
     state.data = migrateCatalog(pending.data);
+    stripSharedProgress(state.data);
     cacheData();
     cloud.version = remote?.version || 0;
     cloud.updatedAt = remote?.updated_at || null;
@@ -326,6 +384,7 @@ async function loadRemoteData({ silent = false } = {}) {
     }
   } else if (remote && validateCatalog(remote.data)) {
     state.data = migrateCatalog(remote.data);
+    stripSharedProgress(state.data);
     cloud.version = remote.version;
     cloud.updatedAt = remote.updated_at;
     cloud.status = cloud.user ? "synced" : "readonly";
@@ -360,6 +419,7 @@ function subscribeToRemoteCatalog() {
           return;
         }
         state.data = migrateCatalog(next.data);
+        stripSharedProgress(state.data);
         cloud.version = next.version;
         cloud.updatedAt = next.updated_at;
         cloud.status = cloud.user ? "synced" : "readonly";
@@ -523,7 +583,7 @@ function renderSidebar() {
   });
 
   const training = state.data.problems.filter((problem) => problem.kind === "training");
-  const done = training.filter((problem) => problem.done).length;
+  const done = training.filter((problem) => wasCompletedThisWeek(problem)).length;
   els.weeklyProgressText.textContent = `${done} / ${training.length}`;
   els.weeklyProgressBar.style.width = `${training.length ? (done / training.length) * 100 : 0}%`;
 }
@@ -634,7 +694,7 @@ function renderKnowledge() {
   const classics = topicProblems.filter((problem) => problem.kind === "classic");
   const training = topicProblems.filter((problem) => problem.kind === "training");
   const filteredTraining = training.filter((problem) => state.difficulty === "全部" || problem.difficulty === state.difficulty);
-  const doneCount = topicProblems.filter((problem) => problem.done).length;
+  const doneCount = topicProblems.filter(isProblemDone).length;
   const article = topic.article || { title: `${topic.name}学习笔记`, body: ["这里还没有教学内容。"], outline: ["补充知识梳理", "添加经典例题", "安排实战训练"] };
 
   els.knowledgeContent.innerHTML = `
@@ -713,7 +773,7 @@ function renderKnowledge() {
               <tbody>
                 ${filteredTraining.map((problem) => `
                   <tr>
-                    <td><button class="status-check ${problem.done ? "is-done" : ""}" data-toggle-done="${problem.id}" aria-label="${problem.done ? "标记为未完成" : "标记为已完成"}" title="${problem.done ? "已完成" : "未完成"}"><i data-lucide="check"></i></button></td>
+                    <td><button class="status-check ${isProblemDone(problem) ? "is-done" : ""}" data-toggle-done="${problem.id}" aria-label="${isProblemDone(problem) ? "标记为未完成" : "标记为已完成"}" title="${isProblemDone(problem) ? "已完成" : "未完成"}"><i data-lucide="check"></i></button></td>
                     <td><div class="table-title">${ojMark(problem.oj)}<div><a href="${escapeHtml(problem.url)}" target="_blank" rel="noreferrer">${escapeHtml(problem.title)}</a><div class="problem-id">${escapeHtml(problem.problemId || problem.oj)}</div></div></div></td>
                     <td><span class="difficulty ${difficultyClass(problem.difficulty)}">${escapeHtml(problem.difficulty)}</span></td>
                     <td><div class="table-tags">${renderTags(problem.knowledge, 2)}</div></td>
@@ -1063,8 +1123,7 @@ async function handleSubmit(event) {
       knowledge,
       techniques: form.get("techniques").split(/[，,]/).map((tag) => tag.trim()).filter(Boolean),
       kind: form.get("kind"),
-      note: form.get("note").trim(),
-      done: existing?.done || false
+      note: form.get("note").trim()
     };
     if (existing) Object.assign(existing, problem);
     else state.data.problems.unshift(problem);
@@ -1227,15 +1286,12 @@ document.addEventListener("click", async (event) => {
   if (doneButton) {
     const problem = state.data.problems.find((item) => item.id === doneButton.dataset.toggleDone);
     if (problem) {
-      if (!canModify("登录管理员账号后即可更新进度")) return;
-      problem.done = !problem.done;
+      const wasDone = isProblemDone(problem);
+      if (wasDone) delete state.progress.completed[problem.id];
+      else state.progress.completed[problem.id] = new Date().toISOString();
+      saveProgress();
       render();
-      try {
-        await saveData();
-        showToast(problem.done ? "已标记为完成" : "已移回待完成");
-      } catch (error) {
-        showToast(error.message || "修改已保存在本机待同步");
-      }
+      showToast(wasDone ? "已移回待完成" : "已标记为完成");
     }
   }
 

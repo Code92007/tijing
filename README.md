@@ -4,6 +4,7 @@
 
 - 前端：纯 HTML/CSS/JavaScript，可同时部署到 GitHub Pages 和自己的 Caddy。
 - 题单：支持一级知识点、标准/自定义子专题、多知识点归类和可检索的技巧标签。
+- 个人进度：完成状态和本周进度保存在当前浏览器，无需账号，也不会改动共享题单。
 - 主数据：Supabase Postgres 中的单一、带版本号 JSONB 文档。
 - 权限：所有访问者可读，只有 `catalog_admins` 中的 Supabase 用户可写。
 - 同步：Supabase Realtime 在不同域名和设备间推送最新版本。
@@ -43,7 +44,9 @@ select id from auth.users where email = '你的管理员邮箱'
 on conflict (user_id) do nothing;
 ```
 
-此后第一次新增或修改内容会创建 `catalog/main` 数据行。其他访客只能浏览。
+此后第一次新增或修改内容会创建 `catalog/main` 数据行。其他访客只能修改自己的本地完成状态，不能修改共享题单。
+
+个人进度不会在设备、浏览器或 `tijing.wannafly.cn` 与 GitHub Pages 两个域名之间同步；清除浏览器站点数据也会清除该进度。题目、专题和比赛等主数据仍按后续章节进行云端同步与备份。
 
 ## 3. GitHub Pages
 
