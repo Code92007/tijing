@@ -115,8 +115,6 @@ function renderTopic(lines, catalog, topic, level) {
     const area = problem.kind === "classic" ? "经典例题" : "实战训练";
     const techniques = problem.techniques?.length ? ` · 技巧：${problem.techniques.map(escapeMarkdown).join("、")}` : "";
     lines.push(`- [${escapeMarkdown(problem.title)}](${problem.url}) · ${problem.oj} · ${problem.difficulty} · ${area}${techniques}`);
-    if (problem.summary) lines.push(`  - 题意：${escapeMarkdown(problem.summary)}`);
-    if (problem.note) lines.push(`  - 备注：${escapeMarkdown(problem.note)}`);
   }
   lines.push("");
 }

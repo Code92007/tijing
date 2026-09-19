@@ -1237,7 +1237,7 @@ p {
   font-size: 11px;
 }
 
-.problem-summary {
+.problem-note {
   display: -webkit-box;
   min-height: 43px;
   margin: 11px 0 14px;
@@ -1247,20 +1247,6 @@ p {
   line-height: 1.7;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-}
-
-.problem-note {
-  min-width: 310px;
-  max-width: 520px;
-  color: var(--ink-soft);
-  line-height: 1.65;
-}
-
-.problem-note > span {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
 }
 
 .tag-row {
@@ -1467,6 +1453,10 @@ p {
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 5px;
+}
+
+.problem-note > .table-techniques:first-child {
+  margin-top: 0;
 }
 
 .empty-state {
@@ -1791,47 +1781,6 @@ p {
   padding: 0 11px;
 }
 
-.field-action-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-}
-
-.extract-button {
-  display: inline-flex;
-  height: 40px;
-  align-items: center;
-  gap: 6px;
-  padding: 0 12px;
-  border: 1px solid #b8cdbf;
-  border-radius: 6px;
-  background: var(--green-soft);
-  color: var(--green-deep);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.extract-button:hover {
-  border-color: #8cae99;
-  background: #e5f1e9;
-}
-
-.extract-button:disabled {
-  cursor: wait;
-  opacity: 0.72;
-}
-
-.extract-button svg {
-  width: 15px;
-  height: 15px;
-}
-
-.extract-button.is-loading svg {
-  animation: spin 900ms linear infinite;
-}
-
 .field textarea {
   min-height: 102px;
   padding: 10px 11px;
@@ -1841,10 +1790,6 @@ p {
 
 .field textarea.article-input {
   min-height: 190px;
-}
-
-.field textarea.summary-input {
-  min-height: 82px;
 }
 
 .field input:focus,
@@ -1857,18 +1802,6 @@ p {
 .field small {
   color: #89908a;
   font-size: 10px;
-}
-
-.field small.extract-status:empty {
-  display: none;
-}
-
-.extract-status.is-success {
-  color: var(--green);
-}
-
-.extract-status.is-error {
-  color: var(--coral);
 }
 
 fieldset.field {
@@ -2242,21 +2175,9 @@ fieldset.field {
     grid-template-columns: 1fr;
   }
 
-  .field-action-row {
-    grid-template-columns: 1fr;
-  }
-
-  .extract-button {
-    justify-content: center;
-  }
-
   .checkbox-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {

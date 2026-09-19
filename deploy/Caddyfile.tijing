@@ -1,5 +1,8 @@
 tijing.wannafly.cn {
+	root * /root/tijing/public
 	encode zstd gzip
+	try_files {path} /index.html
+	file_server
 
 	header {
 		X-Content-Type-Options nosniff
@@ -9,14 +12,4 @@ tijing.wannafly.cn {
 
 	@mutable path / /index.html /app.js /styles.css /config.js
 	header @mutable Cache-Control "no-cache"
-
-	handle /api/problem-summary {
-		reverse_proxy 127.0.0.1:8787
-	}
-
-	handle {
-		root * /root/tijing/public
-		try_files {path} /index.html
-		file_server
-	}
 }

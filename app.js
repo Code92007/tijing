@@ -2,7 +2,7 @@ const STORAGE_KEY = "tijing-data-v5";
 const PENDING_KEY = "tijing-pending-sync-v1";
 const PRESET_PROBLEM_IDS = new Set(["p4", "p5", "p6", "p8"]);
 const PRESET_CONTEST_IDS = new Set(["c1", "c2", "c3", "c4"]);
-const CATALOG_SCHEMA_VERSION = 3;
+const CATALOG_SCHEMA_VERSION = 2;
 
 const defaultDpSubtopics = [
   { id: "dp-linear", name: "线性 DP", description: "沿序列或阶段推进状态，处理前缀、子序列与多状态转移。" },
@@ -109,7 +109,10 @@ const ojStyles = {
   Codeforces: { short: "CF", color: "#3865a8", bg: "#e8edf6" },
   AtCoder: { short: "AT", color: "#4e5651", bg: "#eceeeb" },
   LeetCode: { short: "LC", color: "#9a670e", bg: "#f8efd7" },
-  AcWing: { short: "AW", color: "#7255a6", bg: "#efeaf7" },
+  HDU: { short: "HD", color: "#3973a8", bg: "#e8f0f7" },
+  POJ: { short: "PO", color: "#4b8063", bg: "#e7f0eb" },
+  QOJ: { short: "QO", color: "#9b4b5b", bg: "#f7e9ec" },
+  GYM: { short: "GYM", color: "#b55a3f", bg: "#faebe5" },
   牛客: { short: "NC", color: "#1f7783", bg: "#e1f0f1" },
   其他: { short: "OJ", color: "#5d665f", bg: "#eceeeb" }
 };
@@ -199,7 +202,6 @@ function migrateCatalog(data) {
   }
   migrated.problems = migrated.problems.map((problem) => ({
     ...problem,
-    summary: typeof problem.summary === "string" ? problem.summary : "",
     techniques: Array.isArray(problem.techniques) ? problem.techniques : []
   }));
   migrated.schemaVersion = CATALOG_SCHEMA_VERSION;
@@ -551,7 +553,7 @@ function renderTopbar() {
 function matchesQuery(problem) {
   const q = state.query.trim().toLowerCase();
   if (!q) return true;
-  const text = [problem.title, problem.problemId, problem.oj, problem.summary, problem.note, ...(problem.techniques || []), ...problem.knowledge.map(getTopicName)].join(" ").toLowerCase();
+  const text = [problem.title, problem.problemId, problem.oj, problem.note, ...(problem.techniques || []), ...problem.knowledge.map(getTopicName)].join(" ").toLowerCase();
   return text.includes(q);
 }
 
@@ -587,7 +589,7 @@ function renderProblemCard(problem) {
       </div>
       <h3>${escapeHtml(problem.title)}</h3>
       <span class="problem-id">${escapeHtml(problem.oj)} · ${escapeHtml(problem.problemId || "外部题目")}</span>
-      <p class="problem-summary">${escapeHtml(problem.summary || problem.note || "暂无题意摘要")}</p>
+      <p class="problem-note">${escapeHtml(problem.note || "暂无补充说明")}</p>
       <div class="tag-row">${renderTags(problem.knowledge)}${renderTechniqueTags(problem.techniques)}</div>
       <a class="problem-card-link" href="${escapeHtml(problem.url)}" target="_blank" rel="noreferrer">
         去做题 <i data-lucide="arrow-up-right"></i>
@@ -707,7 +709,7 @@ function renderKnowledge() {
           </div>
           ${filteredTraining.length ? `
             <table class="problem-table">
-              <thead><tr><th>状态</th><th>题目</th><th>难度</th><th>知识点</th><th>精简题意</th><th><span class="sr-only">操作</span></th></tr></thead>
+              <thead><tr><th>状态</th><th>题目</th><th>难度</th><th>知识点</th><th>备注</th><th><span class="sr-only">操作</span></th></tr></thead>
               <tbody>
                 ${filteredTraining.map((problem) => `
                   <tr>
@@ -715,7 +717,7 @@ function renderKnowledge() {
                     <td><div class="table-title">${ojMark(problem.oj)}<div><a href="${escapeHtml(problem.url)}" target="_blank" rel="noreferrer">${escapeHtml(problem.title)}</a><div class="problem-id">${escapeHtml(problem.problemId || problem.oj)}</div></div></div></td>
                     <td><span class="difficulty ${difficultyClass(problem.difficulty)}">${escapeHtml(problem.difficulty)}</span></td>
                     <td><div class="table-tags">${renderTags(problem.knowledge, 2)}</div></td>
-                    <td class="problem-note"><span>${escapeHtml(problem.summary || problem.note || "—")}</span>${problem.techniques?.length ? `<div class="table-techniques">${renderTechniqueTags(problem.techniques, 2)}</div>` : ""}</td>
+                    <td class="problem-note">${problem.note ? `<span>${escapeHtml(problem.note)}</span>` : ""}${problem.techniques?.length ? `<div class="table-techniques">${renderTechniqueTags(problem.techniques, 2)}</div>` : ""}</td>
                     <td class="table-actions">${renderEntryActions("problem", problem.id, problem.title)}</td>
                   </tr>`).join("")}
               </tbody>
@@ -906,9 +908,9 @@ function getFormFields(type) {
     const kind = problem?.kind || state.modalContext.kind || "classic";
     return `
       <label class="field"><span>题目名称</span><input name="title" required value="${escapeHtml(problem?.title || "")}" placeholder="例如：单源最短路径（标准版）" /></label>
-      <label class="field"><span>题目链接</span><div class="field-action-row"><input name="url" type="url" required value="${escapeHtml(problem?.url || "")}" placeholder="https://..." /><button class="extract-button" type="button" data-extract-problem><i data-lucide="sparkles"></i><span>提取题意</span></button></div><small class="extract-status" data-extract-status></small></label>
+      <label class="field"><span>题目链接</span><input name="url" type="url" required value="${escapeHtml(problem?.url || "")}" placeholder="https://..." /><small>支持任意在线评测网站的完整链接</small></label>
       <div class="form-row">
-        <label class="field"><span>来源 OJ</span><input name="oj" required list="ojList" value="${escapeHtml(problem?.oj || "")}" placeholder="洛谷 / Codeforces / 其他" /><datalist id="ojList">${Object.keys(ojStyles).map((oj) => `<option value="${oj}"></option>`).join("")}</datalist></label>
+        <label class="field"><span>来源 OJ</span><input name="oj" required list="ojList" value="${escapeHtml(problem?.oj || "")}" placeholder="洛谷 / Codeforces / HDU" /><datalist id="ojList">${Object.keys(ojStyles).map((oj) => `<option value="${oj}"></option>`).join("")}</datalist></label>
         <label class="field"><span>题号</span><input name="problemId" value="${escapeHtml(problem?.problemId || "")}" placeholder="P4779" /></label>
       </div>
       <div class="form-row">
@@ -916,9 +918,8 @@ function getFormFields(type) {
         <fieldset class="field"><legend>所在区域</legend><div class="radio-row"><label class="radio-option"><input type="radio" name="kind" value="classic" ${kind === "classic" ? "checked" : ""} />经典例题</label><label class="radio-option"><input type="radio" name="kind" value="training" ${kind === "training" ? "checked" : ""} />实战训练</label></div></fieldset>
       </div>
       <fieldset class="field"><legend>知识点（可多选）</legend><div class="checkbox-grid">${topicCheckboxes(problem?.knowledge || [state.topicId])}</div></fieldset>
-      <label class="field"><span>精简题意</span><textarea class="summary-input" name="summary" maxlength="240" placeholder="用一两句话说明给定什么、要求什么">${escapeHtml(problem?.summary || "")}</textarea></label>
       <label class="field"><span>技巧标签</span><input name="techniques" value="${escapeHtml(problem?.techniques?.join("，") || "")}" placeholder="Top-k 转恰选 k 个，等价转化，状态降维" /><small>描述这道题具体值得复用的技巧，使用逗号分隔</small></label>
-      <label class="field"><span>做题备注</span><textarea name="note" placeholder="收录原因、关键思路或易错点">${escapeHtml(problem?.note || "")}</textarea></label>`;
+      <label class="field"><span>备注</span><textarea name="note" placeholder="这道题值得收录的原因、关键思路或易错点">${escapeHtml(problem?.note || "")}</textarea></label>`;
   }
   if (type === "contest") {
     const contest = state.data.contests.find((item) => item.id === state.editingId);
@@ -974,93 +975,6 @@ function slugify(input) {
 function ensureFeaturedContest() {
   if (state.data.contests.length && !state.data.contests.some((contest) => contest.featured)) {
     state.data.contests[0].featured = true;
-  }
-}
-
-async function extractProblemSummary(button) {
-  const form = button.closest("form");
-  const urlInput = form?.elements.namedItem("url");
-  const status = form?.querySelector("[data-extract-status]");
-  const endpoint = String(window.TIJING_CONFIG?.problemSummaryApiUrl || "").trim();
-  const problemUrl = urlInput?.value.trim();
-
-  if (!problemUrl) {
-    urlInput?.focus();
-    showToast("请先填写题目链接");
-    return;
-  }
-  try {
-    new URL(problemUrl);
-  } catch {
-    urlInput?.focus();
-    showToast("题目链接格式不正确");
-    return;
-  }
-  if (!endpoint) {
-    showToast("题意提取服务尚未配置");
-    return;
-  }
-
-  const originalContent = button.innerHTML;
-  button.disabled = true;
-  button.classList.add("is-loading");
-  button.innerHTML = `<i data-lucide="loader-circle"></i><span>提取中</span>`;
-  if (status) {
-    status.className = "extract-status";
-    status.textContent = "正在读取题面并生成中文摘要…";
-  }
-  renderIcons();
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 45_000);
-
-  try {
-    const headers = { "Content-Type": "application/json" };
-    if (cloud.client) {
-      const session = await cloud.client.auth.getSession();
-      const token = session.data.session?.access_token;
-      if (token) headers.Authorization = `Bearer ${token}`;
-    }
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ url: problemUrl }),
-      signal: controller.signal
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || `提取服务返回 ${response.status}`);
-    if (!payload.summary) throw new Error("提取服务没有返回有效题意");
-
-    const fillIfEmpty = (name, value) => {
-      const input = form.elements.namedItem(name);
-      if (input && value && !input.value.trim()) input.value = value;
-    };
-    fillIfEmpty("title", payload.title);
-    fillIfEmpty("oj", payload.oj);
-    fillIfEmpty("problemId", payload.problemId);
-    const summaryInput = form.elements.namedItem("summary");
-    if (summaryInput && payload.summary) summaryInput.value = payload.summary;
-
-    if (status) {
-      status.className = "extract-status is-success";
-      status.textContent = "题意已填入，可继续修改";
-    }
-    showToast("精简题意已生成");
-  } catch (error) {
-    const message = error.name === "AbortError"
-      ? "提取超时，请稍后重试"
-      : error.name === "TypeError" ? "题意提取服务暂不可用" : (error.message || "题意提取失败");
-    if (status) {
-      status.className = "extract-status is-error";
-      status.textContent = message;
-    }
-    showToast(message);
-  } finally {
-    clearTimeout(timeout);
-    button.disabled = false;
-    button.classList.remove("is-loading");
-    button.innerHTML = originalContent;
-    renderIcons();
   }
 }
 
@@ -1147,7 +1061,6 @@ async function handleSubmit(event) {
       problemId: form.get("problemId").trim(),
       difficulty: form.get("difficulty"),
       knowledge,
-      summary: form.get("summary").trim(),
       techniques: form.get("techniques").split(/[，,]/).map((tag) => tag.trim()).filter(Boolean),
       kind: form.get("kind"),
       note: form.get("note").trim(),
@@ -1300,9 +1213,6 @@ document.addEventListener("click", async (event) => {
     renderKnowledge();
     renderIcons();
   }
-
-  const extractButton = event.target.closest("[data-extract-problem]");
-  if (extractButton) await extractProblemSummary(extractButton);
 
   if (event.target.closest("[data-close-modal]")) closeModal();
 
