@@ -1,5 +1,7 @@
 const STORAGE_KEY = "tijing-data-v5";
 const PENDING_KEY = "tijing-pending-sync-v1";
+const PRESET_PROBLEM_IDS = new Set(["p4", "p5", "p6", "p8"]);
+const PRESET_CONTEST_IDS = new Set(["c1", "c2", "c3", "c4"]);
 
 const seedData = {
   topics: [
@@ -77,95 +79,8 @@ const seedData = {
       }
     }
   ],
-  problems: [
-    {
-      id: "p4",
-      title: "灾后重建",
-      problemId: "P1119",
-      oj: "洛谷",
-      url: "https://www.luogu.com.cn/problem/P1119",
-      difficulty: "困难",
-      knowledge: ["graph", "dp"],
-      kind: "training",
-      note: "离线询问与 Floyd 增量更新。",
-      done: false
-    },
-    {
-      id: "p5",
-      title: "Greg and Graph",
-      problemId: "295B",
-      oj: "Codeforces",
-      url: "https://codeforces.com/problemset/problem/295/B",
-      difficulty: "困难",
-      knowledge: ["graph", "dp"],
-      kind: "training",
-      note: "反向加点视角下的 Floyd。",
-      done: true
-    },
-    {
-      id: "p6",
-      title: "Road Reduction",
-      problemId: "ABC252 E",
-      oj: "AtCoder",
-      url: "https://atcoder.jp/contests/abc252/tasks/abc252_e",
-      difficulty: "中等",
-      knowledge: ["graph"],
-      kind: "training",
-      note: "从最短路树中恢复边的编号。",
-      done: false
-    },
-    {
-      id: "p8",
-      title: "加分二叉树",
-      problemId: "P1040",
-      oj: "洛谷",
-      url: "https://www.luogu.com.cn/problem/P1040",
-      difficulty: "中等",
-      knowledge: ["dp"],
-      kind: "training",
-      note: "区间 DP 与方案恢复。",
-      done: false
-    }
-  ],
-  contests: [
-    {
-      id: "c1",
-      title: "Educational Codeforces Round 166",
-      oj: "Codeforces",
-      url: "https://codeforces.com/contest/1971",
-      date: "2024-05-30",
-      note: "题目梯度自然，A–D 很适合作为整场限时训练。",
-      tags: ["综合", "Div. 2"],
-      featured: true
-    },
-    {
-      id: "c2",
-      title: "AtCoder Beginner Contest 357",
-      oj: "AtCoder",
-      url: "https://atcoder.jp/contests/abc357",
-      date: "2024-06-08",
-      note: "覆盖模拟、字符串与矩阵快速幂，后半场区分度很好。",
-      tags: ["综合", "ABC"]
-    },
-    {
-      id: "c3",
-      title: "LeetCode 第 400 场周赛",
-      oj: "LeetCode",
-      url: "https://leetcode.cn/contest/weekly-contest-400/",
-      date: "2024-06-02",
-      note: "前两题适合练手，后两题可以集中训练状态设计。",
-      tags: ["周赛", "动态规划"]
-    },
-    {
-      id: "c4",
-      title: "Codeforces Round 954 (Div. 3)",
-      oj: "Codeforces",
-      url: "https://codeforces.com/contest/1986",
-      date: "2024-06-23",
-      note: "题量充足，适合按两小时完整复盘。",
-      tags: ["Div. 3", "限时训练"]
-    }
-  ]
+  problems: [],
+  contests: []
 };
 
 const ojStyles = {
@@ -185,6 +100,8 @@ const state = {
   query: "",
   difficulty: "全部",
   modalType: null,
+  editingId: null,
+  modalContext: {},
   lessonExpanded: false
 };
 
@@ -230,10 +147,24 @@ const els = {
 function loadData() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : structuredClone(seedData);
+    const data = saved ? JSON.parse(saved) : structuredClone(seedData);
+    const migrated = removePresetEntries(data);
+    if (saved) localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+    return migrated;
   } catch {
     return structuredClone(seedData);
   }
+}
+
+function removePresetEntries(data) {
+  const migrated = structuredClone(data);
+  migrated.problems = Array.isArray(migrated.problems)
+    ? migrated.problems.filter((problem) => !PRESET_PROBLEM_IDS.has(problem.id))
+    : [];
+  migrated.contests = Array.isArray(migrated.contests)
+    ? migrated.contests.filter((contest) => !PRESET_CONTEST_IDS.has(contest.id))
+    : [];
+  return migrated;
 }
 
 function cacheData() {
@@ -331,14 +262,14 @@ async function loadRemoteData({ silent = false } = {}) {
   const pending = getPendingSync();
   const remote = result.data;
   if (pending) {
-    state.data = pending.data;
+    state.data = removePresetEntries(pending.data);
     cacheData();
     cloud.version = remote?.version || 0;
     cloud.updatedAt = remote?.updated_at || null;
 
     if (cloud.user && pending.expectedVersion === cloud.version) {
       try {
-        const saved = await writeRemoteCatalog(pending.data, pending.expectedVersion);
+        const saved = await writeRemoteCatalog(state.data, pending.expectedVersion);
         cloud.version = saved.version;
         cloud.updatedAt = saved.updated_at;
         cloud.status = "synced";
@@ -353,7 +284,7 @@ async function loadRemoteData({ silent = false } = {}) {
       cloud.status = pending.expectedVersion === cloud.version ? (cloud.user ? "offline" : "readonly") : "conflict";
     }
   } else if (remote && validateCatalog(remote.data)) {
-    state.data = remote.data;
+    state.data = removePresetEntries(remote.data);
     cloud.version = remote.version;
     cloud.updatedAt = remote.updated_at;
     cloud.status = cloud.user ? "synced" : "readonly";
@@ -387,7 +318,7 @@ function subscribeToRemoteCatalog() {
           showToast("云端有新版本，本机待同步修改仍已保留");
           return;
         }
-        state.data = next.data;
+        state.data = removePresetEntries(next.data);
         cloud.version = next.version;
         cloud.updatedAt = next.updated_at;
         cloud.status = cloud.user ? "synced" : "readonly";
@@ -540,12 +471,27 @@ function renderTags(ids, max = ids.length) {
   return ids.slice(0, max).map((id) => `<span class="tag">${escapeHtml(getTopicName(id))}</span>`).join("");
 }
 
+function renderEntryActions(type, id, label) {
+  return `
+    <div class="entry-actions">
+      <button class="entry-action" data-edit="${type}" data-entry-id="${escapeHtml(id)}" aria-label="编辑${escapeHtml(label)}" title="编辑">
+        <i data-lucide="pencil"></i>
+      </button>
+      <button class="entry-action is-danger" data-delete="${type}" data-entry-id="${escapeHtml(id)}" data-entry-label="${escapeHtml(label)}" aria-label="删除${escapeHtml(label)}" title="删除">
+        <i data-lucide="trash-2"></i>
+      </button>
+    </div>`;
+}
+
 function renderProblemCard(problem) {
   return `
     <article class="problem-card">
       <div class="problem-card-head">
         ${ojMark(problem.oj)}
-        <span class="difficulty ${difficultyClass(problem.difficulty)}">${escapeHtml(problem.difficulty)}</span>
+        <div class="card-head-actions">
+          <span class="difficulty ${difficultyClass(problem.difficulty)}">${escapeHtml(problem.difficulty)}</span>
+          ${renderEntryActions("problem", problem.id, problem.title)}
+        </div>
       </div>
       <h3>${escapeHtml(problem.title)}</h3>
       <span class="problem-id">${escapeHtml(problem.oj)} · ${escapeHtml(problem.problemId || "外部题目")}</span>
@@ -570,7 +516,10 @@ function renderKnowledge() {
     <div class="content-wrap">
       <header class="topic-hero">
         <div class="topic-hero-main">
-          <div class="topic-kicker"><span class="topic-dot" style="--topic-color:${topic.color}"></span> KNOWLEDGE PATH</div>
+          <div class="topic-kicker-row">
+            <div class="topic-kicker"><span class="topic-dot" style="--topic-color:${topic.color}"></span> KNOWLEDGE PATH</div>
+            ${renderEntryActions("topic", topic.id, topic.name)}
+          </div>
           <h1>${escapeHtml(topic.name)}</h1>
           <p>${escapeHtml(topic.description)}</p>
           <div class="topic-meta">
@@ -610,7 +559,7 @@ function renderKnowledge() {
       <section class="section">
         <div class="section-heading">
           <div><h2>经典例题</h2><p>用少量代表题掌握核心模型。</p></div>
-          <button class="text-button" data-add="problem"><i data-lucide="plus"></i>添加例题</button>
+          <button class="text-button" data-add="problem" data-kind="classic"><i data-lucide="plus"></i>添加例题</button>
         </div>
         ${classics.length ? `<div class="example-grid">${classics.map(renderProblemCard).join("")}</div>` : renderEmpty("暂无匹配的经典例题", "可以调整搜索词，或收录一道新题。")}
       </section>
@@ -618,7 +567,7 @@ function renderKnowledge() {
       <section class="section">
         <div class="section-heading">
           <div><h2>实战训练</h2><p>完成后点亮状态，保留自己的练习节奏。</p></div>
-          <button class="text-button" data-add="problem"><i data-lucide="plus"></i>添加训练</button>
+          <button class="text-button" data-add="problem" data-kind="training"><i data-lucide="plus"></i>添加训练</button>
         </div>
         <div class="training-panel">
           <div class="training-toolbar">
@@ -629,7 +578,7 @@ function renderKnowledge() {
           </div>
           ${filteredTraining.length ? `
             <table class="problem-table">
-              <thead><tr><th>状态</th><th>题目</th><th>难度</th><th>知识点</th><th>备注</th></tr></thead>
+              <thead><tr><th>状态</th><th>题目</th><th>难度</th><th>知识点</th><th>备注</th><th><span class="sr-only">操作</span></th></tr></thead>
               <tbody>
                 ${filteredTraining.map((problem) => `
                   <tr>
@@ -638,6 +587,7 @@ function renderKnowledge() {
                     <td><span class="difficulty ${difficultyClass(problem.difficulty)}">${escapeHtml(problem.difficulty)}</span></td>
                     <td><div class="table-tags">${renderTags(problem.knowledge, 2)}</div></td>
                     <td class="problem-note">${escapeHtml(problem.note || "—")}</td>
+                    <td class="table-actions">${renderEntryActions("problem", problem.id, problem.title)}</td>
                   </tr>`).join("")}
               </tbody>
             </table>` : renderEmpty("暂无匹配的训练题", "试试切换难度或更换搜索词。")}
@@ -668,7 +618,10 @@ function renderContestCard(contest) {
     <article class="contest-card">
       ${ojMark(contest.oj)}
       <div class="contest-card-body">
-        <div class="contest-card-meta"><span>${escapeHtml(contest.oj)}</span><span>${escapeHtml(date.full)}</span></div>
+        <div class="contest-card-meta">
+          <span>${escapeHtml(contest.oj)}</span><span>${escapeHtml(date.full)}</span>
+          ${renderEntryActions("contest", contest.id, contest.title)}
+        </div>
         <h3>${escapeHtml(contest.title)}</h3>
         <p>${escapeHtml(contest.note || "暂无复盘备注")}</p>
         <div class="contest-card-footer">
@@ -693,7 +646,10 @@ function renderContests() {
           <h1>比赛收藏</h1>
           <p>留下值得完整训练或赛后复盘的比赛，跨 OJ 建立自己的比赛档案。</p>
         </div>
-        <div class="contest-summary"><strong>${contests.length}</strong><span>场比赛</span></div>
+        <div class="contest-header-side">
+          <div class="contest-summary"><strong>${contests.length}</strong><span>场比赛</span></div>
+          <button class="text-button" data-add="contest"><i data-lucide="plus"></i>添加比赛</button>
+        </div>
       </header>
 
       ${featured ? `
@@ -707,7 +663,10 @@ function renderContests() {
               <p>${escapeHtml(featured.note || "暂无复盘备注")}</p>
               <div class="tag-row">${featured.tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</div>
             </div>
-            <a class="primary-button" href="${escapeHtml(featured.url)}" target="_blank" rel="noreferrer">打开比赛 <i data-lucide="arrow-up-right"></i></a>
+            <div class="featured-controls">
+              ${renderEntryActions("contest", featured.id, featured.title)}
+              <a class="primary-button" href="${escapeHtml(featured.url)}" target="_blank" rel="noreferrer">打开比赛 <i data-lucide="arrow-up-right"></i></a>
+            </div>
           </article>
         </section>` : renderEmpty("还没有收藏比赛", "添加一场值得训练或复盘的比赛。")}
 
@@ -749,22 +708,27 @@ function topicOptions(selected = state.topicId) {
   return state.data.topics.map((topic) => `<option value="${topic.id}" ${topic.id === selected ? "selected" : ""}>${escapeHtml(topic.name)}</option>`).join("");
 }
 
-function topicCheckboxes() {
+function topicCheckboxes(selectedIds = [state.topicId]) {
+  const selected = new Set(selectedIds);
   return state.data.topics.map((topic) => `
     <label class="checkbox-option">
-      <input type="checkbox" name="knowledge" value="${topic.id}" ${topic.id === state.topicId ? "checked" : ""} />
+      <input type="checkbox" name="knowledge" value="${topic.id}" ${selected.has(topic.id) ? "checked" : ""} />
       <span class="topic-dot" style="--topic-color:${topic.color}"></span>${escapeHtml(topic.name)}
     </label>`).join("");
 }
 
-function openModal(type) {
+function openModal(type, itemId = null, context = {}) {
   state.modalType = type;
+  state.editingId = itemId;
+  state.modalContext = context;
   els.addMenu.classList.remove("is-open");
+  const editing = Boolean(itemId) && type !== "delete";
   const configs = {
-    problem: { eyebrow: "PROBLEM", title: "收录题目", button: "保存题目" },
-    contest: { eyebrow: "CONTEST", title: "收藏比赛", button: "保存比赛" },
-    topic: { eyebrow: "KNOWLEDGE", title: "新增知识点", button: "创建知识点" },
+    problem: { eyebrow: "PROBLEM", title: editing ? "编辑题目" : "收录题目", button: editing ? "保存修改" : "保存题目" },
+    contest: { eyebrow: "CONTEST", title: editing ? "编辑比赛" : "收藏比赛", button: editing ? "保存修改" : "保存比赛" },
+    topic: { eyebrow: "KNOWLEDGE", title: editing ? "编辑知识点" : "新增知识点", button: editing ? "保存修改" : "创建知识点" },
     article: { eyebrow: "LESSON", title: "编辑教学内容", button: "保存内容" },
+    delete: { eyebrow: "DELETE", title: "确认删除", button: "确认删除" },
     login: { eyebrow: "CLOUD", title: "管理员登录", button: "发送登录链接" },
     account: { eyebrow: "SYNC", title: "云端同步", button: "退出登录" }
   };
@@ -772,6 +736,7 @@ function openModal(type) {
   els.modalEyebrow.textContent = config.eyebrow;
   els.modalTitle.textContent = config.title;
   els.submitButton.textContent = config.button;
+  els.submitButton.classList.toggle("danger-button", type === "delete");
   els.formFields.innerHTML = getFormFields(type);
   els.modalLayer.hidden = false;
   document.body.style.overflow = "hidden";
@@ -780,6 +745,13 @@ function openModal(type) {
 }
 
 function getFormFields(type) {
+  if (type === "delete") {
+    return `
+      <div class="delete-confirmation">
+        <span class="delete-confirmation-icon"><i data-lucide="triangle-alert"></i></span>
+        <div><strong>删除“${escapeHtml(state.modalContext.label || "这个条目")}”？</strong><p>删除后会立即保存；启用云端同步时，也会同步到其他设备。</p></div>
+      </div>`;
+  }
   if (type === "login") {
     return `
       <label class="field"><span>管理员邮箱</span><input name="email" type="email" required autocomplete="email" placeholder="name@example.com" /></label>
@@ -792,36 +764,41 @@ function getFormFields(type) {
       ${pending ? `<div class="account-summary"><strong>本机有待同步修改</strong><span>${escapeHtml(pending.savedAt || "")}</span></div>` : ""}`;
   }
   if (type === "problem") {
+    const problem = state.data.problems.find((item) => item.id === state.editingId);
+    const difficulty = problem?.difficulty || "中等";
+    const kind = problem?.kind || state.modalContext.kind || "classic";
     return `
-      <label class="field"><span>题目名称</span><input name="title" required placeholder="例如：单源最短路径（标准版）" /></label>
-      <label class="field"><span>题目链接</span><input name="url" type="url" required placeholder="https://..." /><small>支持任意在线评测网站的完整链接</small></label>
+      <label class="field"><span>题目名称</span><input name="title" required value="${escapeHtml(problem?.title || "")}" placeholder="例如：单源最短路径（标准版）" /></label>
+      <label class="field"><span>题目链接</span><input name="url" type="url" required value="${escapeHtml(problem?.url || "")}" placeholder="https://..." /><small>支持任意在线评测网站的完整链接</small></label>
       <div class="form-row">
-        <label class="field"><span>来源 OJ</span><input name="oj" required list="ojList" placeholder="洛谷 / Codeforces / 其他" /><datalist id="ojList">${Object.keys(ojStyles).map((oj) => `<option value="${oj}"></option>`).join("")}</datalist></label>
-        <label class="field"><span>题号</span><input name="problemId" placeholder="P4779" /></label>
+        <label class="field"><span>来源 OJ</span><input name="oj" required list="ojList" value="${escapeHtml(problem?.oj || "")}" placeholder="洛谷 / Codeforces / 其他" /><datalist id="ojList">${Object.keys(ojStyles).map((oj) => `<option value="${oj}"></option>`).join("")}</datalist></label>
+        <label class="field"><span>题号</span><input name="problemId" value="${escapeHtml(problem?.problemId || "")}" placeholder="P4779" /></label>
       </div>
       <div class="form-row">
-        <label class="field"><span>难度</span><select name="difficulty"><option>简单</option><option selected>中等</option><option>困难</option></select></label>
-        <fieldset class="field"><legend>所在区域</legend><div class="radio-row"><label class="radio-option"><input type="radio" name="kind" value="classic" checked />经典例题</label><label class="radio-option"><input type="radio" name="kind" value="training" />实战训练</label></div></fieldset>
+        <label class="field"><span>难度</span><select name="difficulty">${["简单", "中等", "困难"].map((item) => `<option ${item === difficulty ? "selected" : ""}>${item}</option>`).join("")}</select></label>
+        <fieldset class="field"><legend>所在区域</legend><div class="radio-row"><label class="radio-option"><input type="radio" name="kind" value="classic" ${kind === "classic" ? "checked" : ""} />经典例题</label><label class="radio-option"><input type="radio" name="kind" value="training" ${kind === "training" ? "checked" : ""} />实战训练</label></div></fieldset>
       </div>
-      <fieldset class="field"><legend>知识点（可多选）</legend><div class="checkbox-grid">${topicCheckboxes()}</div></fieldset>
-      <label class="field"><span>备注</span><textarea name="note" placeholder="这道题值得收录的原因、关键思路或易错点"></textarea></label>`;
+      <fieldset class="field"><legend>知识点（可多选）</legend><div class="checkbox-grid">${topicCheckboxes(problem?.knowledge || [state.topicId])}</div></fieldset>
+      <label class="field"><span>备注</span><textarea name="note" placeholder="这道题值得收录的原因、关键思路或易错点">${escapeHtml(problem?.note || "")}</textarea></label>`;
   }
   if (type === "contest") {
+    const contest = state.data.contests.find((item) => item.id === state.editingId);
     return `
-      <label class="field"><span>比赛名称</span><input name="title" required placeholder="例如：AtCoder Beginner Contest 357" /></label>
-      <label class="field"><span>比赛链接</span><input name="url" type="url" required placeholder="https://..." /></label>
+      <label class="field"><span>比赛名称</span><input name="title" required value="${escapeHtml(contest?.title || "")}" placeholder="例如：AtCoder Beginner Contest 357" /></label>
+      <label class="field"><span>比赛链接</span><input name="url" type="url" required value="${escapeHtml(contest?.url || "")}" placeholder="https://..." /></label>
       <div class="form-row">
-        <label class="field"><span>来源 OJ</span><input name="oj" required list="ojList" placeholder="AtCoder" /><datalist id="ojList">${Object.keys(ojStyles).map((oj) => `<option value="${oj}"></option>`).join("")}</datalist></label>
-        <label class="field"><span>比赛日期</span><input name="date" type="date" value="${new Date().toISOString().slice(0, 10)}" /></label>
+        <label class="field"><span>来源 OJ</span><input name="oj" required list="ojList" value="${escapeHtml(contest?.oj || "")}" placeholder="AtCoder" /><datalist id="ojList">${Object.keys(ojStyles).map((oj) => `<option value="${oj}"></option>`).join("")}</datalist></label>
+        <label class="field"><span>比赛日期</span><input name="date" type="date" value="${escapeHtml(contest?.date || new Date().toISOString().slice(0, 10))}" /></label>
       </div>
-      <label class="field"><span>标签</span><input name="tags" placeholder="综合, Div. 2, 动态规划" /><small>使用逗号分隔多个标签</small></label>
-      <label class="field"><span>推荐理由 / 复盘备注</span><textarea name="note" placeholder="题目梯度、适合训练的知识点或建议用时"></textarea></label>`;
+      <label class="field"><span>标签</span><input name="tags" value="${escapeHtml(contest?.tags?.join("，") || "")}" placeholder="综合, Div. 2, 动态规划" /><small>使用逗号分隔多个标签</small></label>
+      <label class="field"><span>推荐理由 / 复盘备注</span><textarea name="note" placeholder="题目梯度、适合训练的知识点或建议用时">${escapeHtml(contest?.note || "")}</textarea></label>`;
   }
   if (type === "topic") {
+    const topic = state.data.topics.find((item) => item.id === state.editingId);
     return `
-      <label class="field"><span>知识点名称</span><input name="name" required placeholder="例如：计算几何" /></label>
-      <label class="field"><span>一句话说明</span><textarea name="description" required placeholder="这个知识点会收录哪些内容"></textarea></label>
-      <label class="field"><span>识别色</span><input name="color" type="color" value="#256d4b" /></label>`;
+      <label class="field"><span>知识点名称</span><input name="name" required value="${escapeHtml(topic?.name || "")}" placeholder="例如：计算几何" /></label>
+      <label class="field"><span>一句话说明</span><textarea name="description" required placeholder="这个知识点会收录哪些内容">${escapeHtml(topic?.description || "")}</textarea></label>
+      <label class="field"><span>识别色</span><input name="color" type="color" value="${escapeHtml(topic?.color || "#256d4b")}" /></label>`;
   }
   const topic = getTopic(state.topicId);
   const article = topic.article || { title: "", body: [], outline: [] };
@@ -836,12 +813,21 @@ function closeModal() {
   els.modalLayer.hidden = true;
   document.body.style.overflow = "";
   state.modalType = null;
+  state.editingId = null;
+  state.modalContext = {};
+  els.submitButton.classList.remove("danger-button");
   els.entryForm.reset();
 }
 
 function slugify(input) {
   const latin = input.toLowerCase().trim().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-").replace(/^-|-$/g, "");
   return `${latin || "topic"}-${Date.now().toString(36).slice(-4)}`;
+}
+
+function ensureFeaturedContest() {
+  if (state.data.contests.length && !state.data.contests.some((contest) => contest.featured)) {
+    state.data.contests[0].featured = true;
+  }
 }
 
 async function handleSubmit(event) {
@@ -879,15 +865,41 @@ async function handleSubmit(event) {
   }
 
   let successMessage = "已保存";
-  if (type === "problem") {
+  if (type === "delete") {
+    const { entityType } = state.modalContext;
+    if (entityType === "problem") {
+      state.data.problems = state.data.problems.filter((problem) => problem.id !== state.editingId);
+      successMessage = "题目已删除";
+    } else if (entityType === "contest") {
+      state.data.contests = state.data.contests.filter((contest) => contest.id !== state.editingId);
+      ensureFeaturedContest();
+      successMessage = "比赛已删除";
+    } else if (entityType === "topic") {
+      const linkedCount = state.data.problems.filter((problem) => problem.knowledge.includes(state.editingId)).length;
+      if (linkedCount) {
+        els.submitButton.disabled = false;
+        showToast(`请先修改关联的 ${linkedCount} 道题，再删除知识点`);
+        return;
+      }
+      if (state.data.topics.length === 1) {
+        els.submitButton.disabled = false;
+        showToast("至少需要保留一个知识点");
+        return;
+      }
+      state.data.topics = state.data.topics.filter((topic) => topic.id !== state.editingId);
+      state.topicId = state.data.topics[0].id;
+      successMessage = "知识点已删除";
+    }
+  } else if (type === "problem") {
     const knowledge = form.getAll("knowledge");
     if (!knowledge.length) {
       els.submitButton.disabled = false;
       showToast("请至少选择一个知识点");
       return;
     }
-    state.data.problems.unshift({
-      id: `p-${Date.now()}`,
+    const existing = state.data.problems.find((problem) => problem.id === state.editingId);
+    const problem = {
+      id: existing?.id || `p-${Date.now()}`,
       title: form.get("title").trim(),
       url: form.get("url").trim(),
       oj: form.get("oj").trim(),
@@ -896,37 +908,50 @@ async function handleSubmit(event) {
       knowledge,
       kind: form.get("kind"),
       note: form.get("note").trim(),
-      done: false
-    });
+      done: existing?.done || false
+    };
+    if (existing) Object.assign(existing, problem);
+    else state.data.problems.unshift(problem);
     state.topicId = knowledge[0];
     state.route = "knowledge";
-    successMessage = "题目已加入题单";
+    successMessage = existing ? "题目已更新" : "题目已加入题单";
   } else if (type === "contest") {
-    state.data.contests.unshift({
-      id: `c-${Date.now()}`,
+    const existing = state.data.contests.find((contest) => contest.id === state.editingId);
+    const contest = {
+      id: existing?.id || `c-${Date.now()}`,
       title: form.get("title").trim(),
       url: form.get("url").trim(),
       oj: form.get("oj").trim(),
       date: form.get("date"),
       note: form.get("note").trim(),
       tags: form.get("tags").split(/[，,]/).map((tag) => tag.trim()).filter(Boolean),
-      featured: state.data.contests.length === 0
-    });
+      featured: existing?.featured || state.data.contests.length === 0
+    };
+    if (existing) Object.assign(existing, contest);
+    else state.data.contests.unshift(contest);
     state.route = "contests";
-    successMessage = "比赛已收藏";
+    successMessage = existing ? "比赛已更新" : "比赛已收藏";
   } else if (type === "topic") {
     const name = form.get("name").trim();
-    const id = slugify(name);
-    state.data.topics.push({
-      id,
-      name,
-      color: form.get("color"),
-      description: form.get("description").trim(),
-      article: { title: `${name}学习笔记`, body: ["这里还没有教学内容。"], outline: ["建立知识框架", "补充经典例题", "安排实战训练"] }
-    });
-    state.topicId = id;
+    const existing = state.data.topics.find((topic) => topic.id === state.editingId);
+    if (existing) {
+      existing.name = name;
+      existing.color = form.get("color");
+      existing.description = form.get("description").trim();
+      state.topicId = existing.id;
+    } else {
+      const id = slugify(name);
+      state.data.topics.push({
+        id,
+        name,
+        color: form.get("color"),
+        description: form.get("description").trim(),
+        article: { title: `${name}学习笔记`, body: ["这里还没有教学内容。"], outline: ["建立知识框架", "补充经典例题", "安排实战训练"] }
+      });
+      state.topicId = id;
+    }
     state.route = "knowledge";
-    successMessage = "知识点已创建";
+    successMessage = existing ? "知识点已更新" : "知识点已创建";
   } else if (type === "article") {
     const topic = getTopic(form.get("topicId"));
     topic.article = {
@@ -959,6 +984,13 @@ function showToast(message) {
   toastTimer = setTimeout(() => els.toast.classList.remove("is-visible"), 2200);
 }
 
+function canModify(message = "登录管理员账号后即可修改云端题单") {
+  if (!cloud.enabled || cloud.user) return true;
+  openModal("login");
+  showToast(message);
+  return false;
+}
+
 document.addEventListener("click", async (event) => {
   const routeButton = event.target.closest("[data-route]");
   if (routeButton) navigate(routeButton.dataset.route);
@@ -978,12 +1010,20 @@ document.addEventListener("click", async (event) => {
 
   const addTarget = event.target.closest("[data-add]");
   if (addTarget) {
-    if (cloud.enabled && !cloud.user) {
-      openModal("login");
-      showToast("登录管理员账号后即可修改云端题单");
-    } else {
-      openModal(addTarget.dataset.add);
-    }
+    if (canModify()) openModal(addTarget.dataset.add, null, { kind: addTarget.dataset.kind });
+  }
+
+  const editTarget = event.target.closest("[data-edit]");
+  if (editTarget && canModify()) {
+    openModal(editTarget.dataset.edit, editTarget.dataset.entryId);
+  }
+
+  const deleteTarget = event.target.closest("[data-delete]");
+  if (deleteTarget && canModify()) {
+    openModal("delete", deleteTarget.dataset.entryId, {
+      entityType: deleteTarget.dataset.delete,
+      label: deleteTarget.dataset.entryLabel
+    });
   }
 
   if (event.target.closest("[data-close-modal]")) closeModal();
@@ -999,11 +1039,7 @@ document.addEventListener("click", async (event) => {
   if (doneButton) {
     const problem = state.data.problems.find((item) => item.id === doneButton.dataset.toggleDone);
     if (problem) {
-      if (cloud.enabled && !cloud.user) {
-        openModal("login");
-        showToast("登录管理员账号后即可更新进度");
-        return;
-      }
+      if (!canModify("登录管理员账号后即可更新进度")) return;
       problem.done = !problem.done;
       render();
       try {

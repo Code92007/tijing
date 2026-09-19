@@ -30,6 +30,17 @@
   box-sizing: border-box;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -515,6 +526,16 @@ svg {
   background: var(--green-deep);
 }
 
+.primary-button.danger-button {
+  border-color: #a63e2d;
+  background: #bc4935;
+  box-shadow: 0 1px 2px rgb(166 62 45 / 18%);
+}
+
+.primary-button.danger-button:hover {
+  background: #973422;
+}
+
 .primary-button .chevron {
   width: 14px;
   height: 14px;
@@ -611,6 +632,18 @@ svg {
   color: var(--green);
   font-size: 12px;
   font-weight: 700;
+}
+
+.topic-kicker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.topic-kicker-row .topic-kicker {
+  margin-bottom: 0;
 }
 
 .topic-kicker .topic-dot {
@@ -878,6 +911,51 @@ p {
   gap: 12px;
 }
 
+.card-head-actions,
+.entry-actions,
+.featured-controls,
+.contest-header-side {
+  display: flex;
+  align-items: center;
+}
+
+.card-head-actions {
+  gap: 10px;
+}
+
+.entry-actions {
+  flex: 0 0 auto;
+  gap: 3px;
+}
+
+.entry-action {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #747c76;
+  cursor: pointer;
+}
+
+.entry-action:hover {
+  background: var(--surface-muted);
+  color: var(--ink);
+}
+
+.entry-action.is-danger:hover {
+  background: var(--coral-soft);
+  color: #a63e2d;
+}
+
+.entry-action svg {
+  width: 15px;
+  height: 15px;
+}
+
 .oj-mark {
   display: inline-grid;
   width: 31px;
@@ -1047,6 +1125,16 @@ p {
   vertical-align: middle;
 }
 
+.problem-table th:last-child,
+.table-actions {
+  width: 76px;
+  text-align: right;
+}
+
+.table-actions .entry-actions {
+  justify-content: flex-end;
+}
+
 .problem-table tr:last-child td {
   border-bottom: 0;
 }
@@ -1160,6 +1248,13 @@ p {
   font-weight: 500;
 }
 
+.contest-header-side {
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
 .featured-contest {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr) auto;
@@ -1168,6 +1263,12 @@ p {
   padding: 24px 0;
   border-top: 1px solid var(--line-strong);
   border-bottom: 1px solid var(--line);
+}
+
+.featured-controls {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
 }
 
 .contest-date {
@@ -1259,6 +1360,11 @@ p {
   font-size: 10px;
 }
 
+.contest-card-meta .entry-actions {
+  margin-left: auto;
+  margin-top: -7px;
+}
+
 .contest-card-footer {
   display: flex;
   align-items: flex-end;
@@ -1277,6 +1383,36 @@ p {
   font-size: 11px;
   font-weight: 600;
   text-decoration: none;
+}
+
+.delete-confirmation {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.delete-confirmation-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--coral-soft);
+  color: #a63e2d;
+}
+
+.delete-confirmation strong {
+  display: block;
+  margin-top: 1px;
+  font-size: 15px;
+}
+
+.delete-confirmation p {
+  margin: 7px 0 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.7;
 }
 
 .modal-layer[hidden] {
@@ -1717,9 +1853,9 @@ fieldset.field {
     gap: 14px;
   }
 
-  .featured-contest > .primary-button {
+  .featured-controls {
     grid-column: 2;
-    justify-self: start;
+    align-items: flex-start;
   }
 
   .contest-date {
