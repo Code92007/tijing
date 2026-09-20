@@ -578,7 +578,7 @@ const cloud = {
   submissions: [],
   version: 0,
   updatedAt: null,
-  status: "local",
+  status: "unconfigured",
   error: "",
   channel: null
 };
@@ -1064,8 +1064,8 @@ async function initializeCloud() {
   const url = String(config.supabaseUrl || "").trim();
   const key = String(config.supabasePublishableKey || config.supabaseAnonKey || "").trim();
   if (!url || !key) {
-    cloud.status = "local";
-    renderSyncStatus();
+    cloud.status = "unconfigured";
+    render();
     return;
   }
   cloud.enabled = true;
@@ -1177,7 +1177,7 @@ function normalizeKnowledgeSelection(ids) {
 }
 
 function canAdminEdit() {
-  return !cloud.enabled || cloud.isAdmin;
+  return cloud.enabled && cloud.isAdmin;
 }
 
 function getOjStyle(oj) {
@@ -1198,16 +1198,19 @@ function renderIcons() {
 }
 
 function renderSyncStatus() {
+  const readonlyStatus = cloud.user
+    ? { label: "只读账号", icon: "user-round", title: "当前账号不是管理员，点击查看账号状态" }
+    : { label: "管理员登录", icon: "log-in", title: "登录管理员账号以编辑和审核题单" };
   const statuses = {
-    local: { label: "本地模式", icon: "hard-drive", title: "尚未配置云端数据库" },
+    unconfigured: { label: "管理员登录", icon: "log-in", title: "管理员登录尚未配置" },
     loading: { label: "正在同步", icon: "loader-circle", title: "正在读取云端数据" },
-    readonly: { label: "游客只读", icon: "cloud", title: "游客可以浏览和投稿，只有管理员可以编辑" },
+    readonly: readonlyStatus,
     synced: { label: "已同步", icon: "cloud-check", title: `云端版本 ${cloud.version}` },
     saving: { label: "正在保存", icon: "cloud-upload", title: "正在写入云端数据库" },
     offline: { label: "离线副本", icon: "cloud-off", title: cloud.error || "云端暂时不可用，本机修改会保留" },
     conflict: { label: "同步冲突", icon: "triangle-alert", title: "云端和本机都有新修改，本机副本已保留" }
   };
-  const status = statuses[cloud.status] || statuses.local;
+  const status = statuses[cloud.status] || statuses.unconfigured;
   els.syncStatusButton.className = `sync-status-button is-${cloud.status}`;
   els.syncStatusButton.title = status.title;
   els.syncStatusButton.innerHTML = `<i data-lucide="${status.icon}"></i><span>${status.label}</span>`;
@@ -1301,11 +1304,15 @@ function renderAccessControls() {
       <button role="menuitem" data-add="contest"><i data-lucide="trophy"></i><span><strong>比赛</strong><small>收藏一场值得回看的比赛</small></span></button>
       <button role="menuitem" data-add="topic"><i data-lucide="tags"></i><span><strong>知识点 / 子专题</strong><small>扩展层级或整理自定义专题</small></span></button>
       ${cloud.enabled && cloud.isAdmin ? `<button role="menuitem" data-review-submissions><i data-lucide="inbox"></i><span><strong>投稿审核</strong><small>审核游客提交的题目与题解</small></span></button>` : ""}`;
-  } else {
+  } else if (cloud.enabled) {
     els.addButton.innerHTML = `<i data-lucide="send"></i><span>投稿</span><i data-lucide="chevron-down" class="chevron"></i>`;
     els.addMenu.innerHTML = `
       <button role="menuitem" data-submit-entry="submit-problem"><i data-lucide="file-plus-2"></i><span><strong>投稿题目</strong><small>推荐一道值得收录的题</small></span></button>
-      <button role="menuitem" data-submit-entry="submit-solution"><i data-lucide="notebook-pen"></i><span><strong>投稿题解</strong><small>为已有题目补充题解链接</small></span></button>`;
+      <button role="menuitem" data-submit-entry="submit-solution"><i data-lucide="notebook-pen"></i><span><strong>投稿题解</strong><small>为已有题目补充题解链接</small></span></button>
+      <button role="menuitem" data-admin-login><i data-lucide="${cloud.user ? "user-round" : "log-in"}"></i><span><strong>${cloud.user ? "账号与权限" : "管理员登录"}</strong><small>${cloud.user ? "查看当前账号的权限状态" : "登录后编辑题单并审核投稿"}</small></span></button>`;
+  } else {
+    els.addButton.innerHTML = `<i data-lucide="log-in"></i><span>管理员登录</span>`;
+    els.addMenu.innerHTML = "";
   }
 }
 
@@ -1678,6 +1685,7 @@ function openModal(type, itemId = null, context = {}) {
     article: { eyebrow: "LESSON", title: "编辑教学内容", button: "保存内容" },
     delete: { eyebrow: "DELETE", title: "确认删除", button: "确认删除" },
     login: { eyebrow: "CLOUD", title: "管理员登录", button: "发送登录链接" },
+    "setup-required": { eyebrow: "CLOUD", title: "管理员登录", button: "" },
     account: { eyebrow: "SYNC", title: "账号与同步", button: "退出登录" },
     "submit-problem": { eyebrow: "SUBMISSION", title: "投稿题目", button: "提交审核" },
     "submit-solution": { eyebrow: "SUBMISSION", title: "投稿题解", button: "提交审核" },
@@ -1688,7 +1696,7 @@ function openModal(type, itemId = null, context = {}) {
   els.modalTitle.textContent = config.title;
   els.submitButton.textContent = config.button;
   els.submitButton.classList.toggle("danger-button", type === "delete");
-  els.modalFooter.hidden = type === "review-submissions";
+  els.modalFooter.hidden = type === "review-submissions" || type === "setup-required";
   els.formFields.innerHTML = getFormFields(type);
   els.modalLayer.hidden = false;
   document.body.style.overflow = "hidden";
@@ -1708,6 +1716,11 @@ function getFormFields(type) {
     return `
       <label class="field"><span>管理员邮箱</span><input name="email" type="email" required autocomplete="email" placeholder="name@example.com" /></label>
       <div class="account-summary"><strong>邮箱魔法链接</strong><span>登录链接会发送到管理员邮箱，有效会话仅保存在当前浏览器。</span></div>`;
+  }
+  if (type === "setup-required") {
+    return `
+      <div class="submission-notice"><i data-lucide="shield-alert"></i><span>管理员登录尚未配置，当前题单已锁定为只读。</span></div>
+      <div class="account-summary"><strong>需要连接 Supabase</strong><span>配置完成后，这里会显示邮箱登录，并启用游客投稿与管理员审核。</span></div>`;
   }
   if (type === "account") {
     const pending = getPendingSync();
@@ -1973,6 +1986,11 @@ async function handleSubmit(event) {
   els.submitButton.disabled = true;
 
   if (type === "login") {
+    if (!cloud.enabled || !cloud.client) {
+      els.submitButton.disabled = false;
+      openModal("setup-required");
+      return;
+    }
     const redirectUrl = `${location.origin}${location.pathname}`;
     const result = await cloud.client.auth.signInWithOtp({
       email: form.get("email").trim(),
@@ -2188,7 +2206,7 @@ function showToast(message) {
 
 function canModify(message = "登录管理员账号后即可修改云端题单") {
   if (canAdminEdit()) return true;
-  openModal(cloud.user ? "account" : "login");
+  openModal(!cloud.enabled ? "setup-required" : cloud.user ? "account" : "login");
   showToast(message);
   return false;
 }
@@ -2239,6 +2257,10 @@ document.addEventListener("click", async (event) => {
   if (submitTarget) {
     if (!cloud.enabled) showToast("投稿需要先配置云端数据库");
     else openModal(submitTarget.dataset.submitEntry);
+  }
+
+  if (event.target.closest("[data-admin-login]")) {
+    openModal(!cloud.enabled ? "setup-required" : cloud.user ? "account" : "login");
   }
 
   if (event.target.closest("[data-review-submissions]")) {
@@ -2323,12 +2345,16 @@ document.addEventListener("click", async (event) => {
 
 els.addButton.addEventListener("click", (event) => {
   event.stopPropagation();
+  if (!cloud.enabled) {
+    openModal("setup-required");
+    return;
+  }
   els.addMenu.classList.toggle("is-open");
 });
 
 els.syncStatusButton.addEventListener("click", async () => {
   if (!cloud.enabled) {
-    showToast("配置 Supabase 后会启用云端同步");
+    openModal("setup-required");
     return;
   }
   if (!cloud.client) {

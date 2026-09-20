@@ -517,7 +517,8 @@ svg {
   color: var(--gold);
 }
 
-.sync-status-button.is-offline {
+.sync-status-button.is-offline,
+.sync-status-button.is-unconfigured {
   border-color: #e7bfb4;
   background: var(--coral-soft);
   color: #9a4934;

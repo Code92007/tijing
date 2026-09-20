@@ -14,7 +14,7 @@
 
 1. 创建一个 Supabase 项目。
 2. 在 Supabase SQL Editor 中完整执行 [`supabase/schema.sql`](supabase/schema.sql)。已有项目升级时也要重新完整执行一次；脚本是幂等的，会补齐投稿表、审核策略和管理员权限函数。
-3. 在 Project Settings > API 中找到 Project URL 和 Publishable key。
+3. 打开项目右上角的 Connect，复制 Project URL 和 Publishable key；也可以在 Settings > API Keys 中查看或创建 Publishable key。
 4. 填写 [`config.js`](config.js)：
 
 ```js
@@ -26,6 +26,8 @@ window.TIJING_CONFIG = {
 
 Publishable key 会随前端公开，这是 Supabase 的正常用法；真正的写权限由 RLS 控制。不要把 `service_role` key 写入 `config.js` 或提交到仓库。
 
+未填写这两个配置项时，页面会保持只读并提示管理员登录尚未配置，不会退回到本地可编辑模式。
+
 ## 2. 配置管理员登录
 
 在 Supabase Authentication > URL Configuration 中设置：
@@ -36,7 +38,7 @@ Publishable key 会随前端公开，这是 Supabase 的正常用法；真正的
   - `https://code92007.github.io/tijing/`
   - `http://127.0.0.1:4173/`
 
-部署并打开页面后，点击顶部云端状态按钮，用管理员邮箱接收魔法链接。首次登录创建用户后，在 Supabase SQL Editor 执行：
+部署并打开页面后，点击顶部“管理员登录”，或从“投稿 > 管理员登录”进入，用管理员邮箱接收魔法链接。首次登录创建用户后，在 Supabase SQL Editor 执行：
 
 ```sql
 insert into public.catalog_admins (user_id)
