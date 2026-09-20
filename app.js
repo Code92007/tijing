@@ -440,8 +440,8 @@ const dpProblemRatings = [
 ];
 
 function difficultyFromRating(rating, source) {
-  if (source === "Codeforces") return rating < 1600 ? "简单" : rating < 2200 ? "中等" : "困难";
-  if (source === "AtCoder Problems") return rating < 1200 ? "简单" : rating < 2000 ? "中等" : "困难";
+  if (source === "Codeforces") return rating < 2000 ? "简单" : rating <= 2400 ? "中等" : "困难";
+  if (source === "AtCoder Problems") return rating < 2000 ? "简单" : rating <= 2400 ? "中等" : "困难";
   if (source === "洛谷") return rating <= 2 ? "简单" : rating <= 4 ? "中等" : "困难";
   return null;
 }
