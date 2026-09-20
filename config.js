@@ -1,4 +1,4 @@
 window.TIJING_CONFIG = {
-  supabaseUrl: "",
-  supabasePublishableKey: ""
+  supabaseUrl: "https://mphomjxtxukfnyfxunao.supabase.co",
+  supabasePublishableKey: "sb_publishable_IyxC9mgiqaIuIRt_elrDeg_AirQpUKV"
 };
