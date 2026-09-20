@@ -2205,9 +2205,6 @@ fieldset.field {
     grid-template-columns: minmax(0, 1fr) 225px;
   }
 
-  .problem-table .knowledge-column {
-    display: none;
-  }
 }
 
 @media (max-width: 820px) {
@@ -2386,17 +2383,129 @@ fieldset.field {
   }
 
   .training-panel {
-    overflow-x: auto;
+    overflow: hidden;
   }
 
   .training-toolbar {
-    position: sticky;
-    left: 0;
-    width: calc(100vw - 28px);
+    width: 100%;
   }
 
   .problem-table {
-    min-width: 620px;
+    display: block;
+    min-width: 0;
+  }
+
+  .problem-table thead {
+    display: none;
+  }
+
+  .problem-table tbody {
+    display: block;
+  }
+
+  .problem-table .problem-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 11px 12px;
+    padding: 15px 14px;
+    border-bottom: 1px solid #e9eae5;
+  }
+
+  .problem-table.is-training .problem-row {
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+  }
+
+  .problem-table .problem-row:last-child {
+    border-bottom: 0;
+  }
+
+  .problem-table .problem-row:hover {
+    background: #fbfbf9;
+  }
+
+  .problem-table .problem-row td {
+    width: auto;
+    padding: 0;
+    border: 0;
+  }
+
+  .problem-table .problem-cell {
+    min-width: 0;
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .problem-table.is-training .problem-cell {
+    grid-column: 2;
+  }
+
+  .problem-table .difficulty-column {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .problem-table.is-training .difficulty-column {
+    grid-column: 3;
+  }
+
+  .problem-table .status-cell {
+    grid-column: 1;
+    grid-row: 1;
+    padding-top: 3px;
+  }
+
+  .problem-table .knowledge-column,
+  .problem-table .table-note {
+    display: block;
+    grid-column: 1 / -1;
+  }
+
+  .problem-table.is-training .knowledge-column,
+  .problem-table.is-training .table-note {
+    grid-column: 2 / -1;
+  }
+
+  .problem-table .knowledge-column::before,
+  .problem-table .table-note::before {
+    display: block;
+    margin-bottom: 6px;
+    color: #8a918b;
+    content: attr(data-label);
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .problem-table .table-actions {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+
+  .problem-table.is-training .table-actions {
+    grid-column: 2 / -1;
+  }
+
+  .problem-table .table-title {
+    min-width: 0;
+    align-items: flex-start;
+  }
+
+  .problem-table .table-title > div {
+    min-width: 0;
+  }
+
+  .problem-table .table-title a {
+    display: block;
+    line-height: 1.5;
+  }
+
+  .problem-table .table-tags {
+    min-width: 0;
+  }
+
+  .problem-table .table-note-copy {
+    line-height: 1.7;
   }
 
   .difficulty-cell .rating-value {

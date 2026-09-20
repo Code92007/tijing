@@ -21,7 +21,7 @@ const REMOVED_PROBLEM_SOURCES = new Set([
   "codeforces:280c",
   "codeforces:1540b"
 ]);
-const CATALOG_SCHEMA_VERSION = 5;
+const CATALOG_SCHEMA_VERSION = 6;
 
 const defaultDpSubtopics = [
   { id: "dp-linear", name: "线性 DP", description: "沿序列或阶段推进状态，处理前缀、子序列与多状态转移。" },
@@ -178,6 +178,30 @@ const defaultDpProblems = [
     techniques: ["换根 DP", "组合计数", "子树合并"],
     kind: "classic",
     note: "树形组合计数配合换根，在线性时间内求出所有根的答案。"
+  },
+  {
+    id: "dp-classic-gym102832-j",
+    title: "2020 CCPC 长春站 J - Abstract Painting",
+    url: "https://codeforces.com/gym/102832/problem/J",
+    oj: "GYM",
+    problemId: "102832J",
+    difficulty: "困难",
+    knowledge: ["dp-interval", "dp-bitmask"],
+    techniques: ["区间 DP", "状态压缩 DP", "不交区间", "组合计数"],
+    kind: "classic",
+    note: "把圆映射为横轴上的区间；利用半径至多为 5 的局部性，可按区间分割递推，也可压缩最近端点的可用状态。"
+  },
+  {
+    id: "dp-classic-qoj12409-l",
+    title: "2020 ICPC 济南站 L - Bit Sequence",
+    url: "https://qoj.ac/problem/12409",
+    oj: "QOJ",
+    problemId: "12409",
+    difficulty: "困难",
+    knowledge: ["dp-digit"],
+    techniques: ["二进制数位 DP", "低位枚举", "进位分类", "奇偶性"],
+    kind: "classic",
+    note: "枚举 x 的低 7 位，再用数位 DP 统计高位 1 的奇偶与连续 1 状态，分类处理 x+i 产生的进位。"
   },
   {
     id: "dp-t01-abc345-e",
@@ -1454,12 +1478,12 @@ function renderProblemTable(problems, { scope, showProgress }) {
           <thead><tr>${showProgress ? "<th>状态</th>" : ""}<th>题目</th><th>难度</th><th class="knowledge-column">知识点</th><th>备注</th>${showActions ? "<th class=\"actions-column\"><span class=\"sr-only\">操作</span></th>" : ""}</tr></thead>
           <tbody>
             ${filtered.map((problem) => `
-              <tr>
-                ${showProgress ? `<td><button class="status-check ${isProblemDone(problem) ? "is-done" : ""}" data-toggle-done="${problem.id}" aria-label="${isProblemDone(problem) ? "标记为未完成" : "标记为已完成"}" title="${isProblemDone(problem) ? "已完成" : "未完成"}"><i data-lucide="check"></i></button></td>` : ""}
-                <td><div class="table-title">${ojMark(problem.oj)}<div><a href="${escapeHtml(problemDisplayUrl(problem))}" target="_blank" rel="noreferrer">${escapeHtml(problem.title)}</a><div class="problem-id">${escapeHtml(problem.problemId || problem.oj)}</div></div></div></td>
-                <td><div class="difficulty-cell"><span class="difficulty ${difficultyClass(problem.difficulty)}">${escapeHtml(problem.difficulty)}</span>${renderRatingDisclosure(problem)}</div></td>
-                <td class="knowledge-column"><div class="table-tags">${renderTags(problem.knowledge)}</div></td>
-                <td class="table-note"><div class="table-note-copy">${escapeHtml(problem.note || "")}</div>${problem.techniques?.length ? `<div class="table-techniques">${renderTechniqueTags(problem.techniques)}</div>` : ""}${renderSolutionLinks(problem)}</td>
+              <tr class="problem-row">
+                ${showProgress ? `<td class="status-cell"><button class="status-check ${isProblemDone(problem) ? "is-done" : ""}" data-toggle-done="${problem.id}" aria-label="${isProblemDone(problem) ? "标记为未完成" : "标记为已完成"}" title="${isProblemDone(problem) ? "已完成" : "未完成"}"><i data-lucide="check"></i></button></td>` : ""}
+                <td class="problem-cell"><div class="table-title">${ojMark(problem.oj)}<div><a href="${escapeHtml(problemDisplayUrl(problem))}" target="_blank" rel="noreferrer">${escapeHtml(problem.title)}</a><div class="problem-id">${escapeHtml(problem.problemId || problem.oj)}</div></div></div></td>
+                <td class="difficulty-column"><div class="difficulty-cell"><span class="difficulty ${difficultyClass(problem.difficulty)}">${escapeHtml(problem.difficulty)}</span>${renderRatingDisclosure(problem)}</div></td>
+                <td class="knowledge-column" data-label="知识点"><div class="table-tags">${renderTags(problem.knowledge)}</div></td>
+                <td class="table-note" data-label="备注"><div class="table-note-copy">${escapeHtml(problem.note || "")}</div>${problem.techniques?.length ? `<div class="table-techniques">${renderTechniqueTags(problem.techniques)}</div>` : ""}${renderSolutionLinks(problem)}</td>
                 ${showActions ? `<td class="table-actions">${renderEntryActions("problem", problem.id, problem.title)}</td>` : ""}
               </tr>`).join("")}
           </tbody>
