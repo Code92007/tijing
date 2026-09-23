@@ -21,23 +21,27 @@ const REMOVED_PROBLEM_SOURCES = new Set([
   "codeforces:280c",
   "codeforces:1540b"
 ]);
-const CATALOG_SCHEMA_VERSION = 6;
+const CATALOG_SCHEMA_VERSION = 7;
 
 const defaultDpSubtopics = [
-  { id: "dp-linear", name: "线性 DP", description: "沿序列或阶段推进状态，处理前缀、子序列与多状态转移。" },
-  { id: "dp-knapsack", name: "背包 DP", description: "围绕容量、选择次数与物品组合建立状态。" },
-  { id: "dp-interval", name: "区间 DP", description: "按区间长度组织转移，处理合并、分割与括号结构。" },
-  { id: "dp-tree", name: "树形 DP", description: "在树上汇总子树信息，设计父子状态与合并方式。" },
-  { id: "dp-bitmask", name: "状态压缩 DP", description: "用位集合表示选择状态，解决小规模组合决策问题。" },
-  { id: "dp-subset", name: "子集 DP", parentId: "dp-bitmask", description: "围绕子集枚举、子集划分与补集关系组织转移。" },
-  { id: "dp-sos", name: "SOS DP", parentId: "dp-bitmask", description: "沿子集包含关系做高维前缀和与信息聚合。" },
-  { id: "dp-digit", name: "数位 DP", description: "按数位处理上界、前导零与自动机状态，统计区间内的数字。" },
-  { id: "dp-probability", name: "概率 / 期望 DP", description: "用概率转移、期望线性性与贡献拆分刻画随机过程。" }
+  { id: "dp-linear", name: "线性 DP", color: "#4f78b5", description: "沿序列或阶段推进状态，处理前缀、子序列与多状态转移。" },
+  { id: "dp-counting", name: "计数 DP", color: "#3f7d68", description: "围绕方案数设计状态，处理组合结构、贡献统计与去重。" },
+  { id: "dp-insertion", name: "插入 DP", parentId: "dp-counting", color: "#5f8f75", description: "按值或位置逐个插入元素，维护排列结构与新增贡献。" },
+  { id: "dp-out-of-order", name: "乱序 DP", parentId: "dp-counting", color: "#49776f", description: "依据偏序或依赖关系安排非自然顺序的状态遍历。" },
+  { id: "dp-knapsack", name: "背包 DP", color: "#8a6a3f", description: "围绕容量、选择次数与物品组合建立状态。" },
+  { id: "dp-interval", name: "区间 DP", color: "#b75c49", description: "按区间长度组织转移，处理合并、分割与括号结构。" },
+  { id: "dp-tree", name: "树形 DP", color: "#4b8063", description: "在树上汇总子树信息，设计父子状态与合并方式。" },
+  { id: "dp-bitmask", name: "状态压缩 DP", color: "#735d9f", description: "用位集合表示选择状态，解决小规模组合决策问题。" },
+  { id: "dp-subset", name: "子集 DP", parentId: "dp-bitmask", color: "#2f7d83", description: "围绕子集枚举、子集划分与补集关系组织转移。" },
+  { id: "dp-sos", name: "SOS DP", parentId: "dp-bitmask", color: "#a05d75", description: "沿子集包含关系做高维前缀和与信息聚合。" },
+  { id: "dp-digit", name: "数位 DP", color: "#5f6f3d", description: "按数位处理上界、前导零与自动机状态，统计区间内的数字。" },
+  { id: "dp-carry-digit", name: "进位数位 DP", parentId: "dp-digit", color: "#778944", description: "在逐位转移中显式维护进位或借位，处理跨位影响。" },
+  { id: "dp-probability", name: "概率 / 期望 DP", color: "#a46532", description: "用概率转移、期望线性性与贡献拆分刻画随机过程。" }
 ].map((topic, index) => ({
   ...topic,
   parentId: topic.parentId || "dp",
   group: "standard",
-  color: ["#4f78b5", "#8a6a3f", "#b75c49", "#4b8063", "#735d9f", "#2f7d83", "#a05d75", "#5f6f3d", "#a46532"][index],
+  color: topic.color || ["#4f78b5", "#8a6a3f", "#b75c49", "#4b8063", "#735d9f", "#2f7d83", "#a05d75", "#5f6f3d", "#a46532"][index % 9],
   article: {
     title: `${topic.name}学习笔记`,
     body: ["这里还没有教学内容，可以从核心状态、常见转移和典型边界开始整理。"],
@@ -57,6 +61,32 @@ const defaultDpCustomTopics = [
       title: "从朴素转移到可通过的 DP",
       body: ["从原始状态和转移出发，识别重复计算、无效枚举与可维护的最优信息，再选择前缀和、单调结构或数据结构完成优化。"],
       outline: ["写出朴素转移", "定位复杂度瓶颈", "选择可证明的优化结构"]
+    }
+  },
+  {
+    id: "dp-cht",
+    name: "Convex Hull Trick",
+    description: "把形如直线最值查询的转移改写为斜率优化，用凸包维护候选决策。",
+    parentId: "dp-optimization",
+    group: "standard",
+    color: "#2f7d83",
+    article: {
+      title: "Convex Hull Trick：把转移写成直线查询",
+      body: ["先将决策变量与当前状态变量分离，把转移整理成斜率和截距明确的直线最值查询，再根据插入、查询顺序选择单调队列凸包或动态凸包。"],
+      outline: ["拆分决策项与查询项", "判断斜率和查询是否单调", "处理相等斜率与精度边界"]
+    }
+  },
+  {
+    id: "dp-decision-monotonicity",
+    name: "决策单调性",
+    description: "证明最优决策点随状态单调移动，再用分治或单调队列缩小转移范围。",
+    parentId: "dp-optimization",
+    group: "standard",
+    color: "#8a6a3f",
+    article: {
+      title: "决策单调性：从结构证明到分治优化",
+      body: ["先明确每个状态的最优决策点，验证代价函数是否满足四边形不等式、Monge 性质或题目特有的交换性质，再据此限制每段搜索区间。"],
+      outline: ["写出最优决策点", "证明决策边界单调", "实现分治并核对搜索区间"]
     }
   },
   {
@@ -84,24 +114,24 @@ const reviewedDpProblems = [
   createDpProblem("n03", "training", "CF1913D - Array Collapse", "https://codeforces.com/contest/1913/problem/D", "Codeforces", "1913D", "困难", ["dp-linear"], ["单调栈", "计数 DP", "转移优化"], "用单调栈维护仍会影响答案的前驱，压缩计数 DP 的转移范围。"),
   createDpProblem("n04", "classic", "CF1860D - Balanced String", "https://codeforces.com/contest/1860/problem/D", "Codeforces", "1860D", "困难", ["dp-linear"], ["二维状态", "逆序对计数", "状态设计"], "按已放置字符数和逆序对贡献推进，是基础多维 DP 的完整范例。"),
   createDpProblem("n05", "training", "ABC299 F - Square Subsequence", "https://atcoder.jp/contests/abc299/tasks/abc299_f", "AtCoder", "ABC299 F", "困难", ["dp-linear"], ["子序列 DP", "序列自动机", "next 数组"], "借助 next 数组快速定位下一字符，统计两个相同子序列的构造方案。"),
-  createDpProblem("n06", "training", "ECNA 2023 B - B Road Band", "https://codeforces.com/gym/104757/problem/B", "GYM", "104757B", "困难", ["dp-linear"], ["分段 DP", "决策单调性", "分治优化"], "将选点对应到连续分段，再用决策单调性优化分段转移。"),
+  createDpProblem("n06", "training", "ECNA 2023 B - B Road Band", "https://codeforces.com/gym/104757/problem/B", "GYM", "104757B", "困难", ["dp-decision-monotonicity"], ["分段 DP", "决策单调性", "分治优化"], "将选点对应到连续分段，再用决策单调性优化分段转移。"),
   createDpProblem("n07", "training", "2022 ICPC 济南站 J - Skills", "https://codeforces.com/gym/104076/problem/J", "GYM", "104076J", "困难", ["dp-linear"], ["根号分治", "松弛", "复杂度优化"], "按状态规模分层处理松弛，优化技巧保留为标签而非独立分组。"),
   createDpProblem("n08", "training", "ARC164 D - 1D Coulomb", "https://atcoder.jp/contests/arc164/tasks/arc164_d", "AtCoder", "ARC164 D", "困难", ["dp-linear"], ["组合计数", "前缀状态", "括号结构"], "把全局约束改写为前缀状态，在逐位递推中完成组合计数。"),
   createDpProblem("n09", "training", "ABC279 G - At Most 2 Colors", "https://atcoder.jp/contests/abc279/tasks/abc279_g", "AtCoder", "ABC279 G", "困难", ["dp-linear"], ["计数 DP", "滑动窗口", "前缀和优化"], "维护最近颜色约束，用滑动窗口和前缀和加速计数转移。"),
   createDpProblem("n10", "training", "CF1739E - Cleaning Robot", "https://codeforces.com/contest/1739/problem/E", "Codeforces", "1739E", "困难", ["dp-linear"], ["局部状态", "分类讨论", "滚动 DP"], "用小规模局部状态覆盖所有清扫关系，重点检查转移是否完整。"),
   createDpProblem("n11", "classic", "CF1582F2 - Korney Korneevich and XOR", "https://codeforces.com/contest/1582/problem/F2", "Codeforces", "1582F2", "困难", ["dp-linear"], ["值域状态", "XOR", "可达性 DP"], "用值域上的最小末尾值表示可达 XOR，消除对子序列位置的显式记录。"),
   createDpProblem("n12", "training", "CF1542E2 - Abnormal Permutation Pairs", "https://codeforces.com/contest/1542/problem/E2", "Codeforces", "1542E2", "困难", ["dp-linear"], ["排列计数", "组合数学", "贡献 DP"], "围绕排列对的贡献设计计数状态，组合推导和递推结合紧密。"),
-  createDpProblem("n13", "classic", "ABC134 F - Permutation Oddness", "https://atcoder.jp/contests/abc134/tasks/abc134_f", "AtCoder", "ABC134 F", "困难", ["dp-linear"], ["排列 DP", "插入法", "贡献维护"], "逐个插入排列元素并维护距离贡献，是排列插入 DP 的标准范例。"),
+  createDpProblem("n13", "classic", "ABC134 F - Permutation Oddness", "https://atcoder.jp/contests/abc134/tasks/abc134_f", "AtCoder", "ABC134 F", "困难", ["dp-insertion"], ["排列 DP", "插入法", "贡献维护"], "逐个插入排列元素并维护距离贡献，是排列插入 DP 的标准范例。"),
   createDpProblem("n15", "training", "BAPC 2018 E - Entirely Unsorted Sequences", "https://codeforces.com/gym/102007/problem/E", "GYM", "102007E", "困难", ["dp-linear"], ["计数 DP", "首个非法位置", "多重集排列"], "枚举第一个破坏位置，用补集计数处理含重复元素的排列。"),
-  createDpProblem("n16", "classic", "HDU4055 - Number String", "https://vjudge.net/problem/HDU-4055", "HDU", "4055", "中等", ["dp-linear"], ["排列 DP", "插入法", "前缀和优化", "波浪排列"], "插入新最大值并按相对位置转移；与“置置置换”同构，只保留这一条主记录。"),
+  createDpProblem("n16", "classic", "HDU4055 - Number String", "https://vjudge.net/problem/HDU-4055", "HDU", "4055", "中等", ["dp-insertion"], ["排列 DP", "插入法", "前缀和优化", "波浪排列"], "插入新最大值并按相对位置转移；与“置置置换”同构，只保留这一条主记录。"),
   createDpProblem("n18", "classic", "FZU2129 - 子序列个数", "https://vjudge.net/problem/FZU-2129", "其他", "FZU2129", "中等", ["dp-linear"], ["本质不同子序列", "last 数组", "去重计数"], "记录每个值上次出现位置，扣除重复贡献，是不同子序列计数的标准模型。"),
   createDpProblem("n19", "training", "CF1149B - Three Religions", "https://codeforces.com/contest/1149/problem/B", "Codeforces", "1149B", "困难", ["dp-linear"], ["多序列 DP", "在线子序列", "next 数组"], "动态维护三个串的组合状态，用 next 数组快速判断共同子序列。"),
   createDpProblem("n20", "classic", "CF1110D - Jongmah", "https://codeforces.com/contest/1110/problem/D", "Codeforces", "1110D", "困难", ["dp-linear"], ["局部计数", "滚动状态", "三元组选择"], "把跨值三元组限制在相邻值域内，用小状态滚动完成最优选择。"),
   createDpProblem("n21", "classic", "HDU4003 - Find Metal Mineral", "https://vjudge.net/problem/HDU-4003", "HDU", "4003", "困难", ["dp-tree", "dp-knapsack"], ["树形背包", "分组背包", "返回状态"], "区分是否返回父节点，在子树间做分组背包合并。"),
   createDpProblem("n22", "training", "CF1982E - Number of k-good subarrays", "https://codeforces.com/contest/1982/problem/E", "Codeforces", "1982E", "困难", ["dp-digit"], ["二进制数位 DP", "区间合并", "记忆化搜索"], "把二进制幂次区间的信息作为可合并状态，处理不同长度的数位块。"),
   createDpProblem("n23", "training", "CCPC Guangzhou 2022 M - XOR Sum", "https://codeforces.com/gym/104053/problem/M", "GYM", "104053M", "困难", ["dp-digit", "dp-knapsack"], ["数位背包", "二进制", "余数状态"], "同时记录卡上界数量和当前余数，是数位 DP 与背包状态的交叉模型。"),
-  createDpProblem("n24", "training", "CF1734F - Zeros and Ones", "https://codeforces.com/contest/1734/problem/F", "Codeforces", "1734F", "困难", ["dp-digit"], ["Thue-Morse", "进位", "数位递推"], "利用 Thue-Morse 的自相似性，把区间比较转成带进位的数位递推。"),
-  createDpProblem("n25", "training", "CF1487F - Ones", "https://codeforces.com/contest/1487/problem/F", "Codeforces", "1487F", "困难", ["dp-digit"], ["高位到低位", "借位", "延迟贡献"], "从高位向低位记录差值和仍会生效的全 1 前缀，处理借位影响。"),
+  createDpProblem("n24", "training", "CF1734F - Zeros and Ones", "https://codeforces.com/contest/1734/problem/F", "Codeforces", "1734F", "困难", ["dp-carry-digit"], ["Thue-Morse", "进位", "数位递推"], "利用 Thue-Morse 的自相似性，把区间比较转成带进位的数位递推。"),
+  createDpProblem("n25", "training", "CF1487F - Ones", "https://codeforces.com/contest/1487/problem/F", "Codeforces", "1487F", "困难", ["dp-carry-digit"], ["高位到低位", "借位", "延迟贡献"], "从高位向低位记录差值和仍会生效的全 1 前缀，处理借位影响。"),
   createDpProblem("n27", "training", "CF1868C - Travel Plan", "https://codeforces.com/contest/1868/problem/C", "Codeforces", "1868C", "困难", ["dp-tree"], ["完全二叉树", "组合计数", "记忆化"], "利用隐式完全二叉树的重复结构，记忆化统计路径贡献。"),
   createDpProblem("n28", "training", "HDU7401 - 流量监控", "https://vjudge.net/problem/HDU-7401", "HDU", "7401", "困难", ["dp-tree", "dp-knapsack"], ["树形背包", "匹配计数", "二维背包"], "在子树中统计未匹配节点，并用额外维度累计祖先链四元组贡献。"),
   createDpProblem("n29", "training", "CCPC Guangzhou 2022 I - Infection", "https://codeforces.com/gym/104053/problem/I", "GYM", "104053I", "困难", ["dp-tree", "dp-knapsack", "dp-probability"], ["树上概率 DP", "树形背包", "感染分布"], "在树上合并感染数量的概率分布，同时覆盖树形、背包和概率 DP。"),
@@ -119,7 +149,7 @@ const reviewedDpProblems = [
   createDpProblem("n41", "classic", "CF1312E - Array Shrinking", "https://codeforces.com/contest/1312/problem/E", "Codeforces", "1312E", "中等", ["dp-interval"], ["区间合并", "两阶段 DP", "最少分段"], "先判断区间能否缩成一个值，再求覆盖整个数组的最少可缩区间数。"),
   createDpProblem("n43", "classic", "POJ1390 - Blocks", "http://poj.org/problem?id=1390", "POJ", "1390", "困难", ["dp-interval"], ["附加维状态", "方块消除", "同色合并"], "用额外维记录右侧已连接的同色块数量，是消除类区间 DP 的代表状态。"),
   createDpProblem("n44", "training", "2020 Wannafly Winter Camp Day6 D - 递增递增", "https://ac.nowcoder.com/acm/problem/201932", "牛客", "NC201932", "困难", ["dp-interval"], ["填坑 DP", "组合计数", "非标准区间状态"], "围绕区间中的空位和递增约束设计填坑状态，适合作为非模板训练。"),
-  createDpProblem("n45", "training", "CF1101F - Trucks and Cities", "https://codeforces.com/contest/1101/problem/F", "Codeforces", "1101F", "困难", ["dp-linear"], ["分段 DP", "分治优化", "二分答案"], "二分限制后做分段 DP，并利用决策单调性优化转移。"),
+  createDpProblem("n45", "training", "CF1101F - Trucks and Cities", "https://codeforces.com/contest/1101/problem/F", "Codeforces", "1101F", "困难", ["dp-decision-monotonicity"], ["分段 DP", "分治优化", "二分答案"], "二分限制后做分段 DP，并利用决策单调性优化转移。"),
   createDpProblem("n46", "training", "CF1628D2 - Game on Sum", "https://codeforces.com/contest/1628/problem/D2", "Codeforces", "1628D2", "困难", ["dp-probability"], ["概率 DP", "逆向递推", "博弈过程"], "从终局逆推每一步的最优期望，状态小但概率转移很有启发性。"),
   createDpProblem("n47", "training", "CF1823F - Random Walk", "https://codeforces.com/contest/1823/problem/F", "Codeforces", "1823F", "困难", ["dp-probability", "dp-tree"], ["随机游走", "树上期望", "概率递推"], "在树上递推随机游走的访问期望，是概率与树形 DP 的交叉题。"),
   createDpProblem("n48", "training", "CF1753C - Wish I Knew How to Sort", "https://codeforces.com/contest/1753/problem/C", "Codeforces", "1753C", "困难", ["dp-probability"], ["随机交换", "错位数量", "状态降维"], "把整个 01 排列压成错位数量，递推随机交换达到有序的期望步数。"),
@@ -130,21 +160,21 @@ const reviewedDpProblems = [
   createDpProblem("n56", "classic", "ABC288 F - Integer Division", "https://atcoder.jp/contests/abc288/tasks/abc288_f", "AtCoder", "ABC288 F", "中等", ["dp-linear"], ["划分 DP", "贡献拆分", "前缀和优化"], "把最后一段数字拆成可递推贡献，将朴素二次转移降到线性。"),
   createDpProblem("n57", "training", "力扣天池 04 - 意外惊喜", "https://leetcode.cn/contest/tianchi2022/problems/tRZfIV/", "LeetCode", "天池 04", "困难", ["dp-knapsack"], ["背包 DP", "分治优化", "构造"], "用分治组织物品范围，减少重复背包计算并恢复需要的选择。"),
   createDpProblem("n58", "training", "CF1453F - Even Harder", "https://codeforces.com/contest/1453/problem/F", "Codeforces", "1453F", "困难", ["dp-linear"], ["路径唯一性", "后缀最小值", "状态推导"], "记录路径最后两个节点，并用后缀最小值维护合法前驱。"),
-  createDpProblem("n59", "training", "2019 牛客多校 10 J - Wood Processing", "https://ac.nowcoder.com/acm/contest/890/J", "牛客", "890 J", "困难", ["dp-linear"], ["分组 DP", "斜率优化", "凸包"], "排序后做连续分组，用斜率优化维护每层分组转移。"),
-  createDpProblem("n60", "classic", "CF868F - Yet Another Minimization Problem", "https://codeforces.com/contest/868/problem/F", "Codeforces", "868F", "困难", ["dp-linear"], ["分段 DP", "分治优化", "双指针维护代价"], "分治求每层最优决策，同时用双指针增删维护区间相等对数。"),
+  createDpProblem("n59", "training", "2019 牛客多校 10 J - Wood Processing", "https://ac.nowcoder.com/acm/contest/890/J", "牛客", "890 J", "困难", ["dp-cht"], ["分组 DP", "斜率优化", "凸包"], "排序后做连续分组，用斜率优化维护每层分组转移。"),
+  createDpProblem("n60", "classic", "CF868F - Yet Another Minimization Problem", "https://codeforces.com/contest/868/problem/F", "Codeforces", "868F", "困难", ["dp-decision-monotonicity"], ["分段 DP", "分治优化", "双指针维护代价"], "分治求每层最优决策，同时用双指针增删维护区间相等对数。"),
   createDpProblem("n61", "classic", "ICPC Kunming 2021 C - Cities", "https://ac.nowcoder.com/acm/contest/12548/C", "牛客", "12548 C", "困难", ["dp-interval"], ["区间 DP", "分割", "端点决策"], "围绕区间端点和最后一次分割组织转移，具有明确的区间模型。"),
   createDpProblem("n62", "training", "Nowcoder 91849 D - String Circle", "https://ac.nowcoder.com/acm/contest/91849/D", "牛客", "91849 D", "困难", ["dp-linear"], ["计数 DP", "KMP", "循环移位", "字符串周期"], "先识别每个串的合法旋转偏移，再统计非降切点序列。"),
   createDpProblem("n63", "training", "CF2109E - Binary String Wowee", "https://codeforces.com/contest/2109/problem/E", "Codeforces", "2109E", "困难", ["dp-linear"], ["组合数学", "二进制串", "计数 DP"], "拆分二进制串中的组合贡献，用递推累计合法方案。"),
   createDpProblem("n64", "classic", "CF659G - Fence Divercity", "https://codeforces.com/contest/659/problem/G", "Codeforces", "659G", "困难", ["dp-linear"], ["矩形计数", "前缀贡献", "滚动 DP"], "逐列维护以当前列结尾的连通矩形贡献，是简洁的线性计数 DP。"),
-  createDpProblem("n65", "training", "CF2038D - Divide OR Conquer", "https://codeforces.com/contest/2038/problem/D", "Codeforces", "2038D", "困难", ["dp-linear"], ["乱序 DP", "二维偏序", "遍历顺序"], "依据二维偏序安排状态遍历顺序，让依赖关系在乱序处理中仍保持可转移。"),
+  createDpProblem("n65", "training", "CF2038D - Divide OR Conquer", "https://codeforces.com/contest/2038/problem/D", "Codeforces", "2038D", "困难", ["dp-out-of-order"], ["乱序 DP", "二维偏序", "遍历顺序"], "依据二维偏序安排状态遍历顺序，让依赖关系在乱序处理中仍保持可转移。"),
   createDpProblem("n66", "training", "CF938F - Erasing Substrings", "https://codeforces.com/contest/938/problem/F", "Codeforces", "938F", "困难", ["dp-bitmask"], ["贪心", "状压 DP", "字符串删除"], "先用贪心性质限制仍需记忆的字符集合，再进行状态压缩转移。"),
   createDpProblem("n67", "training", "CF1946F - Nobody is needed", "https://codeforces.com/contest/1946/problem/F", "Codeforces", "1946F", "困难", ["dp-linear"], ["离线", "刷表法", "Fenwick"], "将转移改成向未来状态刷表，并离线维护满足条件的贡献。"),
   createDpProblem("n68", "training", "CF2237F - Paint the Array", "https://codeforces.com/contest/2237/problem/F", "Codeforces", "2237F", "困难", ["dp-linear"], ["数组染色", "状态压缩", "分类转移"], "围绕相邻染色关系压缩局部状态，按位置推进最优方案。"),
   createDpProblem("n69", "training", "CF1832E - Combinatorics Problem", "https://codeforces.com/contest/1832/problem/E", "Codeforces", "1832E", "困难", ["dp-linear"], ["组合数递推", "多阶前缀和", "贡献计算"], "把组合恒等式转成多阶前缀和递推，在线性扫描中计算全部贡献。"),
-  createDpProblem("n70", "classic", "P5999 [CEOI 2016] kangaroo", "https://www.luogu.com.cn/problem/P5999", "洛谷", "P5999", "困难", ["dp-linear"], ["排列 DP", "插入法", "相邻关系"], "逐个插入数值并维护尚未闭合的相邻关系，与其他排列插入题形成完整链路。"),
+  createDpProblem("n70", "classic", "P5999 [CEOI 2016] kangaroo", "https://www.luogu.com.cn/problem/P5999", "洛谷", "P5999", "困难", ["dp-insertion"], ["排列 DP", "插入法", "相邻关系"], "逐个插入数值并维护尚未闭合的相邻关系，与其他排列插入题形成完整链路。"),
   createDpProblem("n71", "training", "CF2122E - Greedy Grid Counting", "https://codeforces.com/contest/2122/problem/E", "Codeforces", "2122E", "困难", ["dp-linear"], ["网格计数", "组合递推", "状态设计"], "把网格上的贪心过程抽象成可计数状态，逐阶段累积方案。"),
   createDpProblem("n72", "training", "P3447 [POI 2006] KRY-Crystals", "https://www.luogu.com.cn/problem/P3447", "洛谷", "P3447", "困难", ["dp-digit"], ["数位 DP", "进制表示", "计数"], "按数位刻画晶体编号的结构约束，统计给定范围内的合法对象。"),
-  createDpProblem("n73", "classic", "CF1715E - Long Way Home", "https://codeforces.com/contest/1715/problem/E", "Codeforces", "1715E", "困难", ["dp-linear"], ["最短路分层", "斜率优化", "CHT"], "在每轮额外操作之间跑最短路，并用凸包优化跨点转移。"),
+  createDpProblem("n73", "classic", "CF1715E - Long Way Home", "https://codeforces.com/contest/1715/problem/E", "Codeforces", "1715E", "困难", ["dp-cht"], ["最短路分层", "斜率优化", "CHT"], "在每轮额外操作之间跑最短路，并用凸包优化跨点转移。"),
   createDpProblem("n75", "classic", "ABC391 G - Many LCS", "https://atcoder.jp/contests/abc391/tasks/abc391_g", "AtCoder", "ABC391 G", "困难", ["dp-bitmask"], ["LCS 数组", "差分掩码", "自动机式转移"], "把一整行 LCS 的相邻差分压成掩码，在追加字符时做有限状态转移。"),
   createDpProblem("n76", "training", "CF2039E - Shohag Loves Inversions", "https://codeforces.com/contest/2039/problem/E", "Codeforces", "2039E", "困难", ["dp-linear"], ["组合数学", "逆序对计数", "递推"], "按新增元素对逆序对的贡献建立组合递推。"),
   createDpProblem("n77", "classic", "ABC231 G - Balls in Boxes", "https://atcoder.jp/contests/abc231/tasks/abc231_g", "AtCoder", "ABC231 G", "困难", ["dp-probability"], ["盒子模型", "组合期望", "概率 DP"], "围绕随机投球后的盒子占用状态计算期望，是标准概率 DP 模型。"),
@@ -198,7 +228,7 @@ const defaultDpProblems = [
     oj: "QOJ",
     problemId: "12409",
     difficulty: "困难",
-    knowledge: ["dp-digit"],
+    knowledge: ["dp-carry-digit"],
     techniques: ["二进制数位 DP", "低位枚举", "进位分类", "奇偶性"],
     kind: "classic",
     note: "枚举 x 的低 7 位，再用数位 DP 统计高位 1 的奇偶与连续 1 状态，分类处理 x+i 产生的进位。"
@@ -855,6 +885,37 @@ function migrateCatalog(data) {
     }
   }
   migrated.problems = mergeDuplicateProblems(migrated.problems);
+
+  const topicMoves = [
+    ["dp-n13", "dp-insertion", ["dp-linear", "dp-counting"]],
+    ["dp-n16", "dp-insertion", ["dp-linear", "dp-counting"]],
+    ["dp-n70", "dp-insertion", ["dp-linear", "dp-counting"]],
+    ["dp-n65", "dp-out-of-order", ["dp-linear", "dp-counting"]],
+    ["dp-classic-qoj12409-l", "dp-carry-digit", ["dp-digit"]],
+    ["dp-n24", "dp-carry-digit", ["dp-digit"]],
+    ["dp-n25", "dp-carry-digit", ["dp-digit"]],
+    ["dp-n59", "dp-cht", ["dp-linear", "dp-optimization"]],
+    ["dp-n73", "dp-cht", ["dp-linear", "dp-optimization"]],
+    ["dp-n06", "dp-decision-monotonicity", ["dp-linear", "dp-optimization"]],
+    ["dp-n45", "dp-decision-monotonicity", ["dp-linear", "dp-optimization"]],
+    ["dp-n60", "dp-decision-monotonicity", ["dp-linear", "dp-optimization"]]
+  ];
+  for (const [defaultProblemId, targetTopicId, replacedTopicIds] of topicMoves) {
+    const defaultProblem = defaultDpProblems.find((problem) => problem.id === defaultProblemId);
+    if (!defaultProblem) continue;
+    const problem = migrated.problems.find((item) => (
+      item.id === defaultProblemId
+      || normalizedProblemUrl(item.url) === normalizedProblemUrl(defaultProblem.url)
+      || normalizedProblemSource(item) === normalizedProblemSource(defaultProblem)
+    ));
+    if (!problem) continue;
+    const replacedIds = new Set(replacedTopicIds.map((id) => topicIdAliases.get(id) || id));
+    const targetId = topicIdAliases.get(targetTopicId) || targetTopicId;
+    problem.knowledge = [...new Set([
+      ...problem.knowledge.filter((id) => !replacedIds.has(id)),
+      targetId
+    ])];
+  }
 
   const wrongSolutionsId = topicIdAliases.get("dp-wrong-solutions") || "dp-wrong-solutions";
   const optimizationId = topicIdAliases.get("dp-optimization") || "dp-optimization";
