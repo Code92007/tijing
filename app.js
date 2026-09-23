@@ -21,21 +21,25 @@ const REMOVED_PROBLEM_SOURCES = new Set([
   "codeforces:280c",
   "codeforces:1540b"
 ]);
-const CATALOG_SCHEMA_VERSION = 7;
+const CATALOG_SCHEMA_VERSION = 8;
 
 const defaultDpSubtopics = [
   { id: "dp-linear", name: "线性 DP", color: "#4f78b5", description: "沿序列或阶段推进状态，处理前缀、子序列与多状态转移。" },
   { id: "dp-counting", name: "计数 DP", color: "#3f7d68", description: "围绕方案数设计状态，处理组合结构、贡献统计与去重。" },
-  { id: "dp-insertion", name: "插入 DP", parentId: "dp-counting", color: "#5f8f75", description: "按值或位置逐个插入元素，维护排列结构与新增贡献。" },
-  { id: "dp-out-of-order", name: "乱序 DP", parentId: "dp-counting", color: "#49776f", description: "依据偏序或依赖关系安排非自然顺序的状态遍历。" },
+  { id: "dp-insertion", name: "插入 DP", color: "#5f8f75", description: "按值或位置逐个插入元素，维护排列结构与新增贡献。" },
+  { id: "dp-out-of-order", name: "乱序 DP", color: "#49776f", description: "依据偏序或依赖关系安排非自然顺序的状态遍历。" },
   { id: "dp-knapsack", name: "背包 DP", color: "#8a6a3f", description: "围绕容量、选择次数与物品组合建立状态。" },
+  { id: "dp-tree-knapsack", name: "树形背包", color: "#5d7f56", description: "在树上合并子树的容量或选择状态，处理分组选择与结构约束。" },
+  { id: "dp-digit-knapsack", name: "数位背包", color: "#7e7843", description: "把数位限制与背包维度结合，维护数量、余数或选取状态。" },
   { id: "dp-interval", name: "区间 DP", color: "#b75c49", description: "按区间长度组织转移，处理合并、分割与括号结构。" },
+  { id: "dp-interval-elimination", name: "消除类 DP", color: "#a95053", description: "围绕相邻合并、同类消除和区间缩减设计状态。" },
+  { id: "dp-fill-holes", name: "填坑 DP", color: "#b06b3f", description: "围绕空位、缺口或待补结构安排转移，处理非标准区间状态。" },
   { id: "dp-tree", name: "树形 DP", color: "#4b8063", description: "在树上汇总子树信息，设计父子状态与合并方式。" },
   { id: "dp-bitmask", name: "状态压缩 DP", color: "#735d9f", description: "用位集合表示选择状态，解决小规模组合决策问题。" },
-  { id: "dp-subset", name: "子集 DP", parentId: "dp-bitmask", color: "#2f7d83", description: "围绕子集枚举、子集划分与补集关系组织转移。" },
-  { id: "dp-sos", name: "SOS DP", parentId: "dp-bitmask", color: "#a05d75", description: "沿子集包含关系做高维前缀和与信息聚合。" },
+  { id: "dp-subset", name: "子集 DP", color: "#2f7d83", description: "围绕子集枚举、子集划分与补集关系组织转移。" },
+  { id: "dp-sos", name: "SOS DP", color: "#a05d75", description: "沿子集包含关系做高维前缀和与信息聚合。" },
   { id: "dp-digit", name: "数位 DP", color: "#5f6f3d", description: "按数位处理上界、前导零与自动机状态，统计区间内的数字。" },
-  { id: "dp-carry-digit", name: "进位数位 DP", parentId: "dp-digit", color: "#778944", description: "在逐位转移中显式维护进位或借位，处理跨位影响。" },
+  { id: "dp-carry-digit", name: "进位数位 DP", color: "#778944", description: "在逐位转移中显式维护进位或借位，处理跨位影响。" },
   { id: "dp-probability", name: "概率 / 期望 DP", color: "#a46532", description: "用概率转移、期望线性性与贡献拆分刻画随机过程。" }
 ].map((topic, index) => ({
   ...topic,
@@ -65,10 +69,10 @@ const defaultDpCustomTopics = [
   },
   {
     id: "dp-cht",
-    name: "Convex Hull Trick",
+    name: "斜率优化（Convex Hull Trick）",
     description: "把形如直线最值查询的转移改写为斜率优化，用凸包维护候选决策。",
-    parentId: "dp-optimization",
-    group: "standard",
+    parentId: "dp",
+    group: "custom",
     color: "#2f7d83",
     article: {
       title: "Convex Hull Trick：把转移写成直线查询",
@@ -77,11 +81,37 @@ const defaultDpCustomTopics = [
     }
   },
   {
+    id: "dp-monotonic-optimization",
+    name: "单调队列/单调栈优化",
+    description: "用单调队列或单调栈维护仍可能成为最优决策的候选状态。",
+    parentId: "dp",
+    group: "custom",
+    color: "#3f7280",
+    article: {
+      title: "单调结构优化：只保留有用的候选状态",
+      body: ["先写出需要查询的极值范围，再判断过期顺序和支配关系是否单调，据此选择单调队列或单调栈维护候选。"],
+      outline: ["识别极值查询", "确定候选淘汰条件", "检查相等元素与边界"]
+    }
+  },
+  {
+    id: "dp-slope-trick",
+    name: "Slope Trick优化",
+    description: "维护分段线性凸函数的斜率变化，用堆或闵可夫斯基和合并代价函数。",
+    parentId: "dp",
+    group: "custom",
+    color: "#826842",
+    article: {
+      title: "Slope Trick：维护凸代价函数",
+      body: ["把状态看作分段线性凸函数，记录斜率发生变化的位置，并利用平移、加绝对值或闵可夫斯基和完成转移。"],
+      outline: ["识别凸代价函数", "记录斜率断点", "实现函数合并与平移"]
+    }
+  },
+  {
     id: "dp-decision-monotonicity",
     name: "决策单调性",
     description: "证明最优决策点随状态单调移动，再用分治或单调队列缩小转移范围。",
-    parentId: "dp-optimization",
-    group: "standard",
+    parentId: "dp",
+    group: "custom",
     color: "#8a6a3f",
     article: {
       title: "决策单调性：从结构证明到分治优化",
@@ -132,6 +162,7 @@ const reviewedDpProblems = [
   createDpProblem("n23", "training", "CCPC Guangzhou 2022 M - XOR Sum", "https://codeforces.com/gym/104053/problem/M", "GYM", "104053M", "困难", ["dp-digit", "dp-knapsack"], ["数位背包", "二进制", "余数状态"], "同时记录卡上界数量和当前余数，是数位 DP 与背包状态的交叉模型。"),
   createDpProblem("n24", "training", "CF1734F - Zeros and Ones", "https://codeforces.com/contest/1734/problem/F", "Codeforces", "1734F", "困难", ["dp-carry-digit"], ["Thue-Morse", "进位", "数位递推"], "利用 Thue-Morse 的自相似性，把区间比较转成带进位的数位递推。"),
   createDpProblem("n25", "training", "CF1487F - Ones", "https://codeforces.com/contest/1487/problem/F", "Codeforces", "1487F", "困难", ["dp-carry-digit"], ["高位到低位", "借位", "延迟贡献"], "从高位向低位记录差值和仍会生效的全 1 前缀，处理借位影响。"),
+  createDpProblem("n26", "training", "CF2021E2 - Digital Village (hard version)", "https://codeforces.com/contest/2021/problem/E2", "Codeforces", "2021E2", "困难", ["dp-tree", "dp-knapsack"], ["Kruskal 重构树", "树形背包", "闵可夫斯基和", "Slope Trick"], "在 Kruskal 重构树上合并凸代价函数，用闵可夫斯基和维护各选择数量的最优值。"),
   createDpProblem("n27", "training", "CF1868C - Travel Plan", "https://codeforces.com/contest/1868/problem/C", "Codeforces", "1868C", "困难", ["dp-tree"], ["完全二叉树", "组合计数", "记忆化"], "利用隐式完全二叉树的重复结构，记忆化统计路径贡献。"),
   createDpProblem("n28", "training", "HDU7401 - 流量监控", "https://vjudge.net/problem/HDU-7401", "HDU", "7401", "困难", ["dp-tree", "dp-knapsack"], ["树形背包", "匹配计数", "二维背包"], "在子树中统计未匹配节点，并用额外维度累计祖先链四元组贡献。"),
   createDpProblem("n29", "training", "CCPC Guangzhou 2022 I - Infection", "https://codeforces.com/gym/104053/problem/I", "GYM", "104053I", "困难", ["dp-tree", "dp-knapsack", "dp-probability"], ["树上概率 DP", "树形背包", "感染分布"], "在树上合并感染数量的概率分布，同时覆盖树形、背包和概率 DP。"),
@@ -856,10 +887,23 @@ function migrateCatalog(data) {
     }
     topicIdAliases.set(defaultTopic.id, existing.id);
     existing.parentId = expectedParentId;
+    existing.group = defaultTopic.group;
+    if (["dp-cht", "dp-slope-trick"].includes(defaultTopic.id)) existing.name = defaultTopic.name;
     existing.description ||= defaultTopic.description;
     existing.color ||= defaultTopic.color;
-    existing.group ||= defaultTopic.group;
     existing.article ||= structuredClone(defaultTopic.article);
+  }
+
+  const topicsById = new Map(migrated.topics.map((topic) => [topic.id, topic]));
+  for (const topic of migrated.topics) {
+    if (!topic.parentId) continue;
+    let parent = topicsById.get(topic.parentId);
+    const seen = new Set([topic.id]);
+    while (parent?.parentId && !seen.has(parent.id)) {
+      seen.add(parent.id);
+      parent = topicsById.get(parent.parentId);
+    }
+    if (parent) topic.parentId = parent.id;
   }
 
   migrated.problems = mergeDuplicateProblems(migrated.problems);
@@ -886,45 +930,57 @@ function migrateCatalog(data) {
   }
   migrated.problems = mergeDuplicateProblems(migrated.problems);
 
-  const topicMoves = [
-    ["dp-n13", "dp-insertion", ["dp-linear", "dp-counting"]],
-    ["dp-n16", "dp-insertion", ["dp-linear", "dp-counting"]],
-    ["dp-n70", "dp-insertion", ["dp-linear", "dp-counting"]],
-    ["dp-n65", "dp-out-of-order", ["dp-linear", "dp-counting"]],
-    ["dp-classic-qoj12409-l", "dp-carry-digit", ["dp-digit"]],
-    ["dp-n24", "dp-carry-digit", ["dp-digit"]],
-    ["dp-n25", "dp-carry-digit", ["dp-digit"]],
-    ["dp-n59", "dp-cht", ["dp-linear", "dp-optimization"]],
-    ["dp-n73", "dp-cht", ["dp-linear", "dp-optimization"]],
-    ["dp-n06", "dp-decision-monotonicity", ["dp-linear", "dp-optimization"]],
-    ["dp-n45", "dp-decision-monotonicity", ["dp-linear", "dp-optimization"]],
-    ["dp-n60", "dp-decision-monotonicity", ["dp-linear", "dp-optimization"]]
+  const topicAssignments = [
+    [["dp-n13", "dp-n16", "dp-n70"], ["dp-linear", "dp-counting", "dp-insertion"]],
+    [["dp-n65"], ["dp-linear", "dp-counting", "dp-out-of-order"]],
+    [["dp-classic-qoj12409-l", "dp-n24", "dp-n25"], ["dp-digit", "dp-carry-digit"]],
+    [["dp-n59", "dp-n73"], ["dp-linear", "dp-optimization", "dp-cht"]],
+    [["dp-n06", "dp-n45", "dp-n60"], ["dp-linear", "dp-optimization", "dp-decision-monotonicity"]],
+    [["dp-optimization-gym102801-k", "dp-n03", "dp-n53"], ["dp-optimization", "dp-monotonic-optimization"]],
+    [["dp-n37", "dp-n41", "dp-n43"], ["dp-interval", "dp-interval-elimination"]],
+    [["dp-n44"], ["dp-interval", "dp-fill-holes"]],
+    [["dp-n21", "dp-n26", "dp-n28", "dp-n29", "dp-n55", "dp-t08-gym104076-c"], ["dp-tree", "dp-knapsack", "dp-tree-knapsack"]],
+    [["dp-n23"], ["dp-digit", "dp-knapsack", "dp-digit-knapsack"]],
+    [["dp-n26"], ["dp-optimization", "dp-slope-trick"]],
+    [["dp-n07"], ["dp-linear", "dp-wrong-solutions"]],
+    [["dp-subset-nowcoder9328-g"], ["dp-bitmask", "dp-subset"]]
   ];
-  for (const [defaultProblemId, targetTopicId, replacedTopicIds] of topicMoves) {
-    const defaultProblem = defaultDpProblems.find((problem) => problem.id === defaultProblemId);
-    if (!defaultProblem) continue;
-    const problem = migrated.problems.find((item) => (
-      item.id === defaultProblemId
-      || normalizedProblemUrl(item.url) === normalizedProblemUrl(defaultProblem.url)
-      || normalizedProblemSource(item) === normalizedProblemSource(defaultProblem)
-    ));
-    if (!problem) continue;
-    const replacedIds = new Set(replacedTopicIds.map((id) => topicIdAliases.get(id) || id));
-    const targetId = topicIdAliases.get(targetTopicId) || targetTopicId;
-    problem.knowledge = [...new Set([
-      ...problem.knowledge.filter((id) => !replacedIds.has(id)),
-      targetId
-    ])];
+  for (const [defaultProblemIds, defaultTopicIds] of topicAssignments) {
+    for (const defaultProblemId of defaultProblemIds) {
+      const defaultProblem = defaultDpProblems.find((problem) => problem.id === defaultProblemId);
+      if (!defaultProblem) continue;
+      const problem = migrated.problems.find((item) => (
+        item.id === defaultProblemId
+        || normalizedProblemUrl(item.url) === normalizedProblemUrl(defaultProblem.url)
+        || normalizedProblemSource(item) === normalizedProblemSource(defaultProblem)
+      ));
+      if (!problem) continue;
+      problem.knowledge = [...new Set([
+        ...problem.knowledge,
+        ...defaultTopicIds.map((id) => topicIdAliases.get(id) || id)
+      ])];
+    }
   }
 
   const wrongSolutionsId = topicIdAliases.get("dp-wrong-solutions") || "dp-wrong-solutions";
   const optimizationId = topicIdAliases.get("dp-optimization") || "dp-optimization";
-  const subsetId = topicIdAliases.get("dp-subset") || "dp-subset";
-  const sosId = topicIdAliases.get("dp-sos") || "dp-sos";
-  const bitmaskId = topicIdAliases.get("dp-bitmask") || "dp-bitmask";
+  const dpTopicIds = new Set(migrated.topics.filter((topic) => topic.id === "dp" || topic.parentId === "dp").map((topic) => topic.id));
+  const techniqueRules = [
+    { pattern: /(?:单调队列|单调栈)/, topics: ["dp-optimization", "dp-monotonic-optimization"] },
+    { pattern: /(?:闵可夫斯基和|Slope\s*Trick)/i, topics: ["dp-optimization", "dp-slope-trick"] },
+    { pattern: /填坑\s*DP/i, topics: ["dp-interval", "dp-fill-holes"] },
+    { pattern: /树形背包/, topics: ["dp-tree", "dp-knapsack", "dp-tree-knapsack"] },
+    { pattern: /数位背包/, topics: ["dp-digit", "dp-knapsack", "dp-digit-knapsack"] }
+  ];
   for (const problem of migrated.problems) {
-    if (problem.knowledge.includes(subsetId) || problem.knowledge.includes(sosId)) {
-      problem.knowledge = problem.knowledge.filter((id) => id !== bitmaskId);
+    if (!problem.knowledge.some((id) => dpTopicIds.has(id))) continue;
+    const techniques = (problem.techniques || []).join(" ");
+    for (const rule of techniqueRules) {
+      if (!rule.pattern.test(techniques)) continue;
+      problem.knowledge = [...new Set([
+        ...problem.knowledge,
+        ...rule.topics.map((id) => topicIdAliases.get(id) || id)
+      ])];
     }
   }
 
@@ -1330,8 +1386,8 @@ function renderSidebar() {
           </div>
           ${children.length ? `
             <div class="topic-children ${expanded ? "is-expanded" : ""}">
-              ${standardChildren.map((child) => renderSidebarChild(child, 1)).join("")}
-              ${customChildren.length ? `<span class="topic-child-label">我的专题</span>${customChildren.map((child) => renderSidebarChild(child, 1)).join("")}` : ""}
+              ${standardChildren.map((child) => renderSidebarChild(child)).join("")}
+              ${customChildren.length ? `<span class="topic-child-label">我的专题</span>${customChildren.map((child) => renderSidebarChild(child)).join("")}` : ""}
             </div>` : ""}
         </div>`;
     })
@@ -1348,11 +1404,9 @@ function renderSidebar() {
   els.weeklyProgressBar.style.width = `${training.length ? (done / training.length) * 100 : 0}%`;
 }
 
-function renderSidebarChild(topic, depth) {
-  const children = getChildTopics(topic.id);
-  const expanded = children.length && state.expandedTopics.has(topic.id);
+function renderSidebarChild(topic) {
   return `
-    <div class="topic-tree-node topic-tree-child" style="--topic-depth:${depth}">
+    <div class="topic-tree-node topic-tree-child">
       <div class="topic-nav-row">
         <button class="topic-nav-item topic-nav-child ${state.topicId === topic.id && state.route === "knowledge" ? "is-active" : ""}" data-topic="${topic.id}">
           <span class="topic-branch" aria-hidden="true"></span>
@@ -1360,9 +1414,7 @@ function renderSidebarChild(topic, depth) {
           ${topic.group === "custom" ? `<i class="custom-topic-icon" data-lucide="sparkles" aria-label="我的专题"></i>` : ""}
           <span class="topic-count">${getTopicProblemCount(topic.id)}</span>
         </button>
-        ${children.length ? `<button class="topic-expand ${expanded ? "is-expanded" : ""}" data-toggle-topic="${topic.id}" aria-label="${expanded ? "收起" : "展开"}${escapeHtml(topic.name)}子专题" title="${expanded ? "收起子专题" : "展开子专题"}"><i data-lucide="chevron-right"></i></button>` : ""}
       </div>
-      ${children.length ? `<div class="topic-children topic-children-nested ${expanded ? "is-expanded" : ""}">${children.map((child) => renderSidebarChild(child, depth + 1)).join("")}</div>` : ""}
     </div>`;
 }
 

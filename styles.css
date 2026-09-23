@@ -300,19 +300,11 @@ svg {
   padding-right: 6px;
   padding-left: 7px;
   font-size: 12px;
+  line-height: 1.35;
 }
 
 .topic-tree-child .topic-nav-row {
   min-width: 0;
-}
-
-.topic-children-nested {
-  margin: 1px 0 3px 9px;
-  padding-left: 7px;
-}
-
-.topic-children-nested .topic-nav-child {
-  font-size: 11px;
 }
 
 .topic-branch {
@@ -347,6 +339,11 @@ svg {
   border-radius: 5px;
   color: var(--ink-soft);
   font-size: 13px;
+}
+
+.topic-nav-item > span:not(.topic-dot, .topic-count) {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .topic-nav-item:hover {
