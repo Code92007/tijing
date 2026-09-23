@@ -21,25 +21,25 @@ const REMOVED_PROBLEM_SOURCES = new Set([
   "codeforces:280c",
   "codeforces:1540b"
 ]);
-const CATALOG_SCHEMA_VERSION = 8;
+const CATALOG_SCHEMA_VERSION = 9;
 
 const defaultDpSubtopics = [
   { id: "dp-linear", name: "线性 DP", color: "#4f78b5", description: "沿序列或阶段推进状态，处理前缀、子序列与多状态转移。" },
   { id: "dp-counting", name: "计数 DP", color: "#3f7d68", description: "围绕方案数设计状态，处理组合结构、贡献统计与去重。" },
-  { id: "dp-insertion", name: "插入 DP", color: "#5f8f75", description: "按值或位置逐个插入元素，维护排列结构与新增贡献。" },
-  { id: "dp-out-of-order", name: "乱序 DP", color: "#49776f", description: "依据偏序或依赖关系安排非自然顺序的状态遍历。" },
+  { id: "dp-insertion", name: "插入 DP", parentId: "dp-counting", color: "#5f8f75", description: "按值或位置逐个插入元素，维护排列结构与新增贡献。" },
+  { id: "dp-out-of-order", name: "乱序 DP", parentId: "dp-counting", color: "#49776f", description: "依据偏序或依赖关系安排非自然顺序的状态遍历。" },
   { id: "dp-knapsack", name: "背包 DP", color: "#8a6a3f", description: "围绕容量、选择次数与物品组合建立状态。" },
-  { id: "dp-tree-knapsack", name: "树形背包", color: "#5d7f56", description: "在树上合并子树的容量或选择状态，处理分组选择与结构约束。" },
-  { id: "dp-digit-knapsack", name: "数位背包", color: "#7e7843", description: "把数位限制与背包维度结合，维护数量、余数或选取状态。" },
+  { id: "dp-tree-knapsack", name: "树形背包", parentId: "dp-knapsack", color: "#5d7f56", description: "在树上合并子树的容量或选择状态，处理分组选择与结构约束。" },
+  { id: "dp-digit-knapsack", name: "数位背包", parentId: "dp-knapsack", color: "#7e7843", description: "把数位限制与背包维度结合，维护数量、余数或选取状态。" },
   { id: "dp-interval", name: "区间 DP", color: "#b75c49", description: "按区间长度组织转移，处理合并、分割与括号结构。" },
-  { id: "dp-interval-elimination", name: "消除类 DP", color: "#a95053", description: "围绕相邻合并、同类消除和区间缩减设计状态。" },
-  { id: "dp-fill-holes", name: "填坑 DP", color: "#b06b3f", description: "围绕空位、缺口或待补结构安排转移，处理非标准区间状态。" },
+  { id: "dp-interval-elimination", name: "消除类 DP", parentId: "dp-interval", color: "#a95053", description: "围绕相邻合并、同类消除和区间缩减设计状态。" },
+  { id: "dp-fill-holes", name: "填坑 DP", parentId: "dp-interval", color: "#b06b3f", description: "围绕空位、缺口或待补结构安排转移，处理非标准区间状态。" },
   { id: "dp-tree", name: "树形 DP", color: "#4b8063", description: "在树上汇总子树信息，设计父子状态与合并方式。" },
   { id: "dp-bitmask", name: "状态压缩 DP", color: "#735d9f", description: "用位集合表示选择状态，解决小规模组合决策问题。" },
-  { id: "dp-subset", name: "子集 DP", color: "#2f7d83", description: "围绕子集枚举、子集划分与补集关系组织转移。" },
-  { id: "dp-sos", name: "SOS DP", color: "#a05d75", description: "沿子集包含关系做高维前缀和与信息聚合。" },
+  { id: "dp-subset", name: "子集 DP", parentId: "dp-bitmask", color: "#2f7d83", description: "围绕子集枚举、子集划分与补集关系组织转移。" },
+  { id: "dp-sos", name: "SOS DP", parentId: "dp-bitmask", color: "#a05d75", description: "沿子集包含关系做高维前缀和与信息聚合。" },
   { id: "dp-digit", name: "数位 DP", color: "#5f6f3d", description: "按数位处理上界、前导零与自动机状态，统计区间内的数字。" },
-  { id: "dp-carry-digit", name: "进位数位 DP", color: "#778944", description: "在逐位转移中显式维护进位或借位，处理跨位影响。" },
+  { id: "dp-carry-digit", name: "进位数位 DP", parentId: "dp-digit", color: "#778944", description: "在逐位转移中显式维护进位或借位，处理跨位影响。" },
   { id: "dp-probability", name: "概率 / 期望 DP", color: "#a46532", description: "用概率转移、期望线性性与贡献拆分刻画随机过程。" }
 ].map((topic, index) => ({
   ...topic,
@@ -71,8 +71,8 @@ const defaultDpCustomTopics = [
     id: "dp-cht",
     name: "斜率优化（Convex Hull Trick）",
     description: "把形如直线最值查询的转移改写为斜率优化，用凸包维护候选决策。",
-    parentId: "dp",
-    group: "custom",
+    parentId: "dp-optimization",
+    group: "standard",
     color: "#2f7d83",
     article: {
       title: "Convex Hull Trick：把转移写成直线查询",
@@ -84,8 +84,8 @@ const defaultDpCustomTopics = [
     id: "dp-monotonic-optimization",
     name: "单调队列/单调栈优化",
     description: "用单调队列或单调栈维护仍可能成为最优决策的候选状态。",
-    parentId: "dp",
-    group: "custom",
+    parentId: "dp-optimization",
+    group: "standard",
     color: "#3f7280",
     article: {
       title: "单调结构优化：只保留有用的候选状态",
@@ -97,8 +97,8 @@ const defaultDpCustomTopics = [
     id: "dp-slope-trick",
     name: "Slope Trick优化",
     description: "维护分段线性凸函数的斜率变化，用堆或闵可夫斯基和合并代价函数。",
-    parentId: "dp",
-    group: "custom",
+    parentId: "dp-optimization",
+    group: "standard",
     color: "#826842",
     article: {
       title: "Slope Trick：维护凸代价函数",
@@ -110,8 +110,8 @@ const defaultDpCustomTopics = [
     id: "dp-decision-monotonicity",
     name: "决策单调性",
     description: "证明最优决策点随状态单调移动，再用分治或单调队列缩小转移范围。",
-    parentId: "dp",
-    group: "custom",
+    parentId: "dp-optimization",
+    group: "standard",
     color: "#8a6a3f",
     article: {
       title: "决策单调性：从结构证明到分治优化",
@@ -894,18 +894,6 @@ function migrateCatalog(data) {
     existing.article ||= structuredClone(defaultTopic.article);
   }
 
-  const topicsById = new Map(migrated.topics.map((topic) => [topic.id, topic]));
-  for (const topic of migrated.topics) {
-    if (!topic.parentId) continue;
-    let parent = topicsById.get(topic.parentId);
-    const seen = new Set([topic.id]);
-    while (parent?.parentId && !seen.has(parent.id)) {
-      seen.add(parent.id);
-      parent = topicsById.get(parent.parentId);
-    }
-    if (parent) topic.parentId = parent.id;
-  }
-
   migrated.problems = mergeDuplicateProblems(migrated.problems);
   for (const defaultProblem of defaultDpProblems) {
     const candidate = structuredClone(defaultProblem);
@@ -964,7 +952,18 @@ function migrateCatalog(data) {
 
   const wrongSolutionsId = topicIdAliases.get("dp-wrong-solutions") || "dp-wrong-solutions";
   const optimizationId = topicIdAliases.get("dp-optimization") || "dp-optimization";
-  const dpTopicIds = new Set(migrated.topics.filter((topic) => topic.id === "dp" || topic.parentId === "dp").map((topic) => topic.id));
+  const topicsById = new Map(migrated.topics.map((topic) => [topic.id, topic]));
+  const belongsToDp = (topic) => {
+    const seen = new Set();
+    let current = topic;
+    while (current && !seen.has(current.id)) {
+      if (current.id === "dp") return true;
+      seen.add(current.id);
+      current = topicsById.get(current.parentId);
+    }
+    return false;
+  };
+  const dpTopicIds = new Set(migrated.topics.filter(belongsToDp).map((topic) => topic.id));
   const techniqueRules = [
     { pattern: /(?:单调队列|单调栈)/, topics: ["dp-optimization", "dp-monotonic-optimization"] },
     { pattern: /(?:闵可夫斯基和|Slope\s*Trick)/i, topics: ["dp-optimization", "dp-slope-trick"] },
@@ -1386,8 +1385,8 @@ function renderSidebar() {
           </div>
           ${children.length ? `
             <div class="topic-children ${expanded ? "is-expanded" : ""}">
-              ${standardChildren.map((child) => renderSidebarChild(child)).join("")}
-              ${customChildren.length ? `<span class="topic-child-label">我的专题</span>${customChildren.map((child) => renderSidebarChild(child)).join("")}` : ""}
+              ${standardChildren.map((child) => renderSidebarChild(child, 1)).join("")}
+              ${customChildren.length ? `<span class="topic-child-label">我的专题</span>${customChildren.map((child) => renderSidebarChild(child, 1)).join("")}` : ""}
             </div>` : ""}
         </div>`;
     })
@@ -1404,17 +1403,22 @@ function renderSidebar() {
   els.weeklyProgressBar.style.width = `${training.length ? (done / training.length) * 100 : 0}%`;
 }
 
-function renderSidebarChild(topic) {
+function renderSidebarChild(topic, depth) {
+  const children = getChildTopics(topic.id);
+  const expanded = children.length && state.expandedTopics.has(topic.id);
+  const activePath = getTopicPath(state.topicId);
   return `
-    <div class="topic-tree-node topic-tree-child">
+    <div class="topic-tree-node topic-tree-child" style="--topic-depth:${depth}">
       <div class="topic-nav-row">
-        <button class="topic-nav-item topic-nav-child ${state.topicId === topic.id && state.route === "knowledge" ? "is-active" : ""}" data-topic="${topic.id}">
+        <button class="topic-nav-item topic-nav-child ${activePath.some((item) => item.id === topic.id) && state.route === "knowledge" ? "is-active" : ""}" data-topic="${topic.id}">
           <span class="topic-branch" aria-hidden="true"></span>
           <span>${escapeHtml(topic.name)}</span>
           ${topic.group === "custom" ? `<i class="custom-topic-icon" data-lucide="sparkles" aria-label="我的专题"></i>` : ""}
           <span class="topic-count">${getTopicProblemCount(topic.id)}</span>
         </button>
+        ${children.length ? `<button class="topic-expand ${expanded ? "is-expanded" : ""}" data-toggle-topic="${topic.id}" aria-label="${expanded ? "收起" : "展开"}${escapeHtml(topic.name)}子分组" title="${expanded ? "收起子分组" : "展开子分组"}"><i data-lucide="chevron-right"></i></button>` : ""}
       </div>
+      ${children.length ? `<div class="topic-children topic-children-nested ${expanded ? "is-expanded" : ""}">${children.map((child) => renderSidebarChild(child, depth + 1)).join("")}</div>` : ""}
     </div>`;
 }
 
