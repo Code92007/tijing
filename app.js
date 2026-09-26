@@ -1311,6 +1311,82 @@ function getTopicProblemCount(topicId) {
   return state.data.problems.filter((problem) => problemBelongsToTopic(problem, topicId)).length;
 }
 
+function getProblemSetExportTopics(topic, problems) {
+  const topicIds = new Set(getTopicScopeIds(topic.id));
+  for (const problem of problems) {
+    for (const topicId of problem.knowledge || []) {
+      for (const item of getTopicPath(topicId)) topicIds.add(item.id);
+    }
+  }
+  return state.data.topics.filter((item) => topicIds.has(item.id));
+}
+
+function createTopicProblemSetManifest(topicId) {
+  const topic = getTopic(topicId);
+  const problems = state.data.problems
+    .filter((problem) => problemBelongsToTopic(problem, topic.id))
+    .sort((left, right) => Number(left.kind === "training") - Number(right.kind === "training"));
+  const exporter = window.TIJING_EXPORT;
+  if (!exporter) {
+    throw new Error("导出组件加载失败，请刷新后重试");
+  }
+
+  const manifest = exporter.createProblemSetManifest({
+    topic,
+    topicPath: getTopicPath(topic),
+    topics: getProblemSetExportTopics(topic, problems),
+    problems,
+    sourceUrl: window.location.href
+  });
+  return { exporter, manifest, problems, topic };
+}
+
+function exportTopicProblemSet(topicId, format) {
+  try {
+    const { exporter, manifest, problems, topic } = createTopicProblemSetManifest(topicId);
+    if (format === "pdf") {
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) throw new Error("浏览器阻止了 PDF 窗口，请允许弹出窗口后重试");
+      printWindow.opener = null;
+      printWindow.document.open();
+      printWindow.document.write(exporter.renderProblemSetPrintHtml(manifest));
+      printWindow.document.close();
+      const openPrintDialog = () => {
+        if (printWindow.closed) return;
+        printWindow.focus();
+        printWindow.print();
+      };
+      if (printWindow.document.fonts?.ready) printWindow.document.fonts.ready.then(openPrintDialog, openPrintDialog);
+      else setTimeout(openPrintDialog, 100);
+      showToast(`已生成 ${problems.length} 道题的 PDF 分享版`);
+      closeExportMenus();
+      return;
+    }
+
+    const content = exporter.serializeProblemSet(manifest);
+    const filename = exporter.problemSetFilename(topic.name, manifest.exportedAt);
+    const url = URL.createObjectURL(new Blob([content], { type: "application/json;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    showToast(`已导出 ${problems.length} 道题`);
+    closeExportMenus();
+  } catch (error) {
+    showToast(error.message || "题单导出失败");
+  }
+}
+
+function closeExportMenus() {
+  for (const menu of document.querySelectorAll(".topic-export-menu.is-open")) {
+    menu.classList.remove("is-open");
+    menu.previousElementSibling?.setAttribute("aria-expanded", "false");
+  }
+}
+
 function normalizeKnowledgeSelection(ids) {
   const unique = [...new Set(ids)].filter((id) => state.data.topics.some((topic) => topic.id === id));
   return unique.filter((id) => !unique.some((otherId) => otherId !== id && getTopicScopeIds(id).includes(otherId)));
@@ -1624,6 +1700,13 @@ function renderKnowledge() {
           <div class="topic-kicker-row">
             <div class="topic-kicker"><span class="topic-dot" style="--topic-color:${topic.color}"></span>${topic.group === "custom" ? "MY TOPIC" : parent ? "SUBTOPIC" : "KNOWLEDGE PATH"}</div>
             <div class="topic-heading-actions">
+              <div class="topic-export">
+                <button class="entry-action" data-toggle-export-menu aria-label="导出${escapeHtml(topic.name)}题单" aria-haspopup="menu" aria-expanded="false" title="导出题单"><i data-lucide="download"></i></button>
+                <div class="topic-export-menu" role="menu">
+                  <button role="menuitem" data-export-topic="${escapeHtml(topic.id)}" data-export-format="json"><i data-lucide="file-json-2"></i><span>JSON 数据文件</span></button>
+                  <button role="menuitem" data-export-topic="${escapeHtml(topic.id)}" data-export-format="pdf"><i data-lucide="file-text"></i><span>PDF 分享版</span></button>
+                </div>
+              </div>
               ${!parent && canAdminEdit() ? `<button class="entry-action" data-add="topic" data-parent-id="${topic.id}" data-topic-group="custom" aria-label="在${escapeHtml(topic.name)}下新增子专题" title="新增子专题"><i data-lucide="folder-plus"></i></button>` : ""}
               ${renderEntryActions("topic", topic.id, topic.name)}
             </div>
@@ -2356,6 +2439,18 @@ document.addEventListener("click", async (event) => {
   const routeButton = event.target.closest("[data-route]");
   if (routeButton) navigate(routeButton.dataset.route);
 
+  const exportMenuTarget = event.target.closest("[data-toggle-export-menu]");
+  if (exportMenuTarget) {
+    const menu = exportMenuTarget.nextElementSibling;
+    const opening = !menu.classList.contains("is-open");
+    closeExportMenus();
+    menu.classList.toggle("is-open", opening);
+    exportMenuTarget.setAttribute("aria-expanded", String(opening));
+  }
+
+  const exportTarget = event.target.closest("[data-export-topic]");
+  if (exportTarget) exportTopicProblemSet(exportTarget.dataset.exportTopic, exportTarget.dataset.exportFormat);
+
   const topicToggle = event.target.closest("[data-toggle-topic]");
   if (topicToggle) {
     const id = topicToggle.dataset.toggleTopic;
@@ -2482,6 +2577,7 @@ document.addEventListener("click", async (event) => {
   }
 
   if (!event.target.closest(".add-wrap")) els.addMenu.classList.remove("is-open");
+  if (!event.target.closest(".topic-export")) closeExportMenus();
 });
 
 els.addButton.addEventListener("click", (event) => {
@@ -2533,6 +2629,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     if (!els.modalLayer.hidden) closeModal();
     els.addMenu.classList.remove("is-open");
+    closeExportMenus();
     closeSidebar();
   }
 });

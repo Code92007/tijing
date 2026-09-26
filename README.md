@@ -4,6 +4,7 @@
 
 - 前端：纯 HTML/CSS/JavaScript，可同时部署到 GitHub Pages 和自己的 Caddy。
 - 题单：侧栏支持知识点、专题与子分组的三级展开，多知识点归类和可检索的技巧标签。
+- 导出：每个知识点及其全部子专题可导出为带版本号的 JSON 数据文件，或生成适合打印和群聊分享的 PDF 版题单；两种格式都会保留题目来源、难度、标签、备注与题解链接。
 - 个人进度：完成状态和本周进度保存在当前浏览器，无需账号，也不会改动共享题单。
 - 主数据：Supabase Postgres 中的单一、带版本号 JSONB 文档。
 - 权限：所有访问者可读并可投稿题目或题解，只有 `catalog_admins` 中的 Supabase 用户可编辑和审核。
@@ -102,7 +103,7 @@ caddy validate --config /etc/caddy/Caddyfile
 systemctl reload caddy
 ```
 
-Caddy 只发布 `/root/tijing/public` 中的 `index.html`、`styles.css`、`app.js`、`config.js` 和 `.nojekyll`，不会暴露仓库根目录、数据库脚本或备份工作流。由于服务器全局关闭了 Caddy 的 HTTP 重定向，正式入口使用 `https://tijing.wannafly.cn/`。
+Caddy 只发布 `/root/tijing/public` 中的 `index.html`、`styles.css`、`app.js`、`problem-set-export.js`、`config.js` 和 `.nojekyll`，不会暴露仓库根目录、数据库脚本或备份工作流。由于服务器全局关闭了 Caddy 的 HTTP 重定向，正式入口使用 `https://tijing.wannafly.cn/`。
 
 ## 5. GitHub 自动备份
 

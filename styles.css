@@ -758,6 +758,55 @@ svg {
   gap: 4px;
 }
 
+.topic-export {
+  position: relative;
+}
+
+.topic-export-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 12;
+  display: none;
+  width: 178px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.topic-export-menu.is-open {
+  display: grid;
+}
+
+.topic-export-menu button {
+  display: grid;
+  min-height: 38px;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.topic-export-menu button:hover {
+  background: var(--surface-muted);
+}
+
+.topic-export-menu svg {
+  width: 15px;
+  height: 15px;
+  color: var(--green);
+}
+
 .parent-topic-link {
   display: inline-flex;
   min-height: 28px;
