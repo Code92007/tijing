@@ -21,7 +21,7 @@ const REMOVED_PROBLEM_SOURCES = new Set([
   "codeforces:280c",
   "codeforces:1540b"
 ]);
-const CATALOG_SCHEMA_VERSION = 9;
+const CATALOG_SCHEMA_VERSION = 10;
 
 const defaultDpSubtopics = [
   { id: "dp-linear", name: "线性 DP", color: "#4f78b5", description: "沿序列或阶段推进状态，处理前缀、子序列与多状态转移。" },
@@ -443,6 +443,18 @@ const defaultDpProblems = [
     techniques: ["二维单调队列", "滑动窗口最值", "网格 DP"],
     kind: "classic",
     note: "把二维窗口转移拆成行列两级单调队列，在线维护 k×k 范围内的最优状态，是二维单调队列优化 DP 的代表题。"
+  },
+  {
+    id: "dp-optimization-qoj15322-i",
+    title: "2025 ICPC 上海站 I - Round screws",
+    url: "https://qoj.ac/problem/15322",
+    oj: "QOJ",
+    problemId: "15322",
+    difficulty: "困难",
+    knowledge: ["dp-linear", "dp-optimization"],
+    techniques: ["值域分块", "高低位拆分", "XOR", "转移优化"],
+    kind: "classic",
+    note: "先把修改操作转成保留位置的线性 DP，再将 18 位值域拆成高、低各 9 位，预处理固定高位时所有低位 XOR 查询的最优值，把单次转移降到 O(2^9)。"
   },
   {
     id: "dp-subset-nowcoder9328-g",
