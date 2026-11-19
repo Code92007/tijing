@@ -1,0 +1,671 @@
+{
+  "year": 2026,
+  "problems": [
+    {
+      "id": "icpc-2026-武汉:J",
+      "site": "武汉",
+      "series": "ICPC",
+      "contest": "2026 ICPC 武汉站",
+      "date": "2026-11-01",
+      "index": "J",
+      "title": "Number Game",
+      "url": "https://qoj.ac/contest/4616/problem/23665",
+      "statement": {
+        "title": "数字游戏（Number Game）",
+        "description": "<p>原题：2026 ICPC 亚洲区域赛武汉站官方中文题面。</p>\n<p>小R 正在玩一个数字游戏。</p>\n<p>她在黑板上写了n 个非负整数a1, a2, · · · , an，它们构成可重集A。</p>\n<p>每次操作中，她可以选择黑板上的若干个数，把它们同时修改为它们构成的可重集的mex†。</p>\n<p>她另外有一个可重集B = {b1, b2, · · · , bn} 作为这个数字游戏的目标。请你判断她是否能通过有限次操作，使黑板上的数从A 变为B。</p>\n<p>† 对于由非负整数构成的可重集S，定义mex(S) 为最小的不属于S 的非负整数。例如，mex{1, 2, 3} = 0，mex{0, 1, 1, 4, 5} = 2。</p>",
+        "input": "<p>本题包含多组测试数据。</p>\n<p>第一行包含一个整数T (1 ≤T ≤2 × $10^{5}$)，表示测试数据组数。</p>\n<p>对于每组测试数据：</p>\n<ul>\n<li>\n<p>第一行包含一个整数n (1 ≤n ≤2 × $10^{5}$)，表示可重集A, B 的大小。</p>\n</li>\n<li>\n<p>第二行包含n 个整数a1, a2, · · · , an (0 ≤ai ≤$10^{9}$)，表示可重集A。</p>\n</li>\n<li>\n<p>第三行包含n 个整数b1, b2, · · · , bn (0 ≤bi ≤$10^{9}$)，表示可重集B。</p>\n</li>\n</ul>\n<p>保证所有测试数据中n 的总和不超过2 × $10^{5}$。</p>",
+        "output": "<p>对于每组测试数据，输出一行，包含一个字符串YES 或NO。如果该组测试数据可以通过有限次操作将A变为B，输出YES，否则输出NO。大小写不敏感。</p>",
+        "hint": "<p>第一组样例中，先选择元素 2，把它改为 mex{2}=0，得到 {1,0,3}；再同时选择 1 和 0，将它们改为 mex{1,0}=2，得到 {2,2,3}。</p>",
+        "samples": [
+          {
+            "input": "4\n3\n1 2 3\n2 2 3\n3\n0 0 0\n2 3 3\n3\n3 3 2\n2 3 3\n4\n10000 10000 10000 10000\n2 3 3 3",
+            "output": "YES\nNO\nYES\nYES"
+          }
+        ],
+        "sourceUrl": "https://qoj.ac/contest/4616/problem/23665"
+      },
+      "statementSource": {
+        "contest_url": "https://qoj.ac/contest/4616",
+        "pdf_url": "https://qoj.ac/download.php?type=statement&id=23656&ver=zh_cn&contest_id=4616",
+        "pdf_sha256": "7c54565de5cd6cfb404ece0b0f25a5e4c1971510849c73e9ad45e2bd04ab0a15",
+        "attribution": "2026 国际大学生程序设计竞赛亚洲区域赛（武汉站）官方中文题面",
+        "processing": "整理下载 PDF 中的官方中文完整题册（28 页，含封面 2 页）；恢复公式排版，按表格边框提取各组样例，保留交互示例的原始对齐图。无题解内容。"
+      },
+      "editorial": {
+        "problemId": "icpc-2026-武汉:J",
+        "view": "full",
+        "revision": "2026-11-17-additional-v1",
+        "source": {
+          "title": "2026 武汉站补充参考题解（非官方）",
+          "author": "gpt-6-astra 生成，Codex 校验与整理",
+          "url": "https://qoj.ac/contest/4616",
+          "contest_url": "https://qoj.ac/contest/4616",
+          "note": "2026-11-17 补充批次；独立推导并经过本地编译、独立校验及交互模拟。验证范围逐题注明；本批未在线提交，不代表官方题解或在线 AC。"
+        },
+        "pages": [],
+        "validation": "非官方模型生成题解；C++17 编译通过，通过 1 组原题样例，通过 17210 组独立小数据校验，通过最大规模数据检查。未在 QOJ 在线提交验证。",
+        "html": "<h1>数字游戏：逆向解锁与必须保留的核心</h1>\n<h2>先学什么</h2>\n<ul>\n<li><strong>mex 的大小上界</strong>：含有 $s$ 个元素的可重集，其 mex 不超过 $s$。</li>\n<li><strong>强归纳法</strong>：证明一种看似更强的操作，其实能够由原操作实现。</li>\n<li><strong>逆向思考</strong>：不直接模拟从 $A$ 到 $B$，而是研究目标中哪些位置可以来自任意初值。</li>\n<li><strong>单调贪心</strong>：可用位置越多，能够解锁的值组只会越多。</li>\n</ul>\n<h2>题意</h2>\n<p>有两个大小均为 $n$ 的非负整数可重集 $A,B$。</p>\n<p>每次可以选择若干个位置，将这些位置上的数全部替换为它们原来的 mex。判断能否经过有限次操作，使最终可重集等于 $B$。</p>\n<p>只要求可重集相同，不要求各个位置一一对应；也允许不进行任何操作。</p>\n<h2>核心推导</h2>\n<h3>1. 一个更方便的等价操作</h3>\n<p>选择 $s$ 个数时，必有</p>\n<p>$$\n0\\le \\operatorname{mex}(S)\\le s.\n$$</p>\n<p>原因是 $s$ 个数不可能同时包含 $0,1,\\ldots,s$ 这 $s+1$ 个不同的数。</p>\n<p>更关键的是下面的结论。</p>\n<p><strong>改写引理：任选 $s\\ge 1$ 个位置，以及满足 $0\\le k\\le s$ 的整数 $k$，都能只在这些位置内部进行有限次原操作，使它们全部变成 $k$。</strong></p>\n<p>对 $k$ 作强归纳。</p>\n<ul>\n<li>当 $k=0$ 时，对每个正数单独操作，其 mex 为 $0$；原来的 $0$ 不动即可。</li>\n<li>当 $k\\ge 1$ 时，先将这 $s$ 个位置全部清零，再选出其中 $k$ 个位置，准备构造 $0,1,\\ldots,k-1$。</li>\n<li>按照 $t=k-1,k-2,\\ldots,0$ 的顺序处理。处理 $t$ 时，选出的 $k$ 个位置中还有 $t+1$ 个未固定位置。由归纳假设，可以将这 $t+1$ 个位置全部变成 $t$，然后固定其中一个位置，不再修改它。</li>\n<li>最后，这 $k$ 个位置恰好包含 $0,1,\\ldots,k-1$；其余 $s-k$ 个位置一直保持为 $0$。因此这 $s$ 个位置的 mex 恰好为 $k$，对它们整体操作即可全部变成 $k$。</li>\n</ul>\n<p>所以，在判断可达性时，可以等价地使用下面的操作：</p>\n<blockquote>\n<p>选择 $s$ 个位置，将它们全部改成 $k$，其中 $0\\le k\\le s$。</p>\n</blockquote>\n<p>注意，这个“改写操作”可能需要多次原操作，并不是说原操作可以直接指定 mex。题目只要求有限次可达，因此不需要实际展开这些操作。</p>\n<h3>2. 从目标出发，解锁可以任意赋值的位置</h3>\n<p>将 $B$ 中相同的数分成一组。对于值 $k$，记它在 $B$ 中的出现次数为 $c_k$。</p>\n<p>维护两类位置：</p>\n<ul>\n<li><strong>固定位置</strong>：尚未解锁，仍要求保留对应的目标值。</li>\n<li><strong>自由位置</strong>：这些位置在起点中取任意非负整数，都仍然可以到达 $B$。</li>\n</ul>\n<p>记自由位置总数为 $f$，初始 $f=0$。</p>\n<p>考虑一个尚未解锁的值组：值为 $k$，有 $c_k$ 个固定副本。</p>\n<p>如果</p>\n<p>$$\nf+c_k\\ge k,\n$$</p>\n<p>那么可以将原来的 $f$ 个自由位置，以及这 $c_k$ 个固定位置，合起来全部视为自由位置。</p>\n<p>为什么成立？无论这 $f+c_k$ 个位置原来是什么，都可以利用改写引理把它们全部变成 $k$。这样就恢复了所需的 $c_k$ 个固定副本，而原先的自由位置取值没有限制，随后仍能到达 $B$。</p>\n<p>因此解锁规则为</p>\n<p>$$\n\\boxed{f+c_k\\ge k\\quad\\Longrightarrow\\quad f\\gets f+c_k.}\n$$</p>\n<p>这里 $c_k$ 始终是该值在原目标 $B$ 中的出现次数；每组只解锁一次。</p>\n<h3>3. 按解锁门槛排序</h3>\n<p>将条件改写成</p>\n<p>$$\nf\\ge k-c_k.\n$$</p>\n<p>定义这一组的门槛为</p>\n<p>$$\nd_k=k-c_k.\n$$</p>\n<p>将所有不同值的组按 $d_k$ 从小到大排序，然后依次处理：</p>\n<ol>\n<li>若 $d_k\\le f$，解锁该组，并令 $f\\gets f+c_k$。</li>\n<li>否则立即停止。</li>\n</ol>\n<p>因为 $f$ 只会增加，而之后所有组的门槛都不小于当前门槛，所以一旦遇到无法解锁的组，后面的组也都无法解锁。</p>\n<p><strong>不能简单按数值 $k$ 排序后遇到失败就停止。</strong> 例如 $B=\\{2,3,3,3\\}$：值 $2$ 的门槛是 $1$，值 $3$ 的门槛是 $0$，应当先解锁值 $3$。</p>\n<h3>4. 剩下的组就是必须保留的核心</h3>\n<p>全部解锁结束后，将所有未解锁组构成的可重集记为 $K$。</p>\n<p>最终判定条件是：</p>\n<p>$$\n\\boxed{A\\text{ 能到达 }B\\iff A\\text{ 包含整个可重集 }K.}\n$$</p>\n<p>也就是，对每个未解锁的值 $k$，都必须有</p>\n<p>$$\n\\operatorname{cnt}_A(k)\\ge c_k.\n$$</p>\n<p>已经解锁的值无需比较出现次数，因为对应位置可以来自任意初值。</p>\n<p>实现时，将 $A,B$ 分别排序。由 $B$ 得到各个值组并执行解锁，再用双指针统计 $A$ 中每个未解锁值的出现次数即可。</p>\n<h3>5. 两个例子</h3>\n<ul>\n<li>$B=\\{2,3,3\\}$：两个组的门槛都是 $1$，而初始 $f=0$，没有任何组能解锁。因此 $K=B$，只有原可重集就等于 $B$ 时才能成功。</li>\n<li>$B=\\{2,3,3,3\\}$：先解锁三个 $3$，得到 $f=3$；再解锁一个 $2$，得到 $f=4$。此时 $K$ 为空，所以任意大小为 $4$ 的初始可重集都能到达它。</li>\n</ul>\n<h2>正确性证明</h2>\n<p>改写引理已在前面通过强归纳证明。下面证明解锁算法给出的条件恰好等价于可达性。</p>\n<h3>引理一：包含当前全部固定副本的任意可重集，都能到达 B</h3>\n<p>对解锁次数归纳。</p>\n<p>初始时，全部 $n$ 个副本都固定，因此大小为 $n$ 且包含这些副本的可重集只能是 $B$ 本身，显然成立。</p>\n<p>假设当前结论成立，自由位置数为 $f$。现在解锁值为 $k$、大小为 $c_k$ 的一组，且满足 $f+c_k\\ge k$。</p>\n<p>任取一个包含解锁后全部固定副本的可重集。为其余固定副本各保留所需位置，剩余恰好有 $f+c_k$ 个位置。由改写引理，可以把这些位置全部变成 $k$，从而得到一个包含解锁前全部固定副本的状态。</p>\n<p>根据归纳假设，这个状态能够到达 $B$，所以原状态也能够到达 $B$。</p>\n<p>归纳成立。于是，任何包含最终核心 $K$ 的 $A$ 都能到达 $B$。</p>\n<h3>引理二：如果一个状态能够到达 B，那么它必须包含 K</h3>\n<p>设算法结束时自由位置数为 $f$。对于每个仍在核心中的值 $k$，都有</p>\n<p>$$\nf+c_k&lt;k.\n$$</p>\n<p>记 $\\mathcal S$ 为所有包含 $K$ 的大小为 $n$ 的可重集。</p>\n<p>考虑任意一次原操作 $X\\to Y$，并假设 $Y\\in\\mathcal S$。设该操作选择了 $s$ 个位置，输出值为 $k$，则 $s\\ge k$，所以操作后至少有 $k$ 个值为 $k$ 的元素。</p>\n<p>如果 $k$ 是核心中的值，由于 $Y$ 必须包含其他所有核心副本，它至多只能有 $c_k+f$ 个值为 $k$ 的元素。因此</p>\n<p>$$\n\\operatorname{cnt}_Y(k)\\le c_k+f&lt;k,\n$$</p>\n<p>产生矛盾。</p>\n<p>所以本次操作的输出值不属于核心。被选择的位置在 $Y$ 中全部是该非核心值，故 $Y$ 中所需的所有核心副本都位于未被选择的位置上。这些位置在 $X$ 中没有变化，于是 $X$ 也包含 $K$。</p>\n<p>因此，只要一步操作后的状态包含 $K$，操作前也必然包含 $K$。由于 $B$ 包含 $K$，沿任意到达 $B$ 的操作序列逐步反推，起点 $A$ 必须包含 $K$。</p>\n<h3>定理</h3>\n<p>按门槛排序扫描后，一旦停止，所有剩余组都满足 $f+c_k&lt;k$，因此引理二适用。</p>\n<p>由引理一，$A$ 包含 $K$ 时一定能到达 $B$；由引理二，$A$ 不包含 $K$ 时一定不能到达 $B$。算法的输出恰好符合这一条件，故算法正确。</p>\n<h2>复杂度</h2>\n<p>设一组数据的长度为 $n$，不同目标值的数量为 $m\\le n$。</p>\n<ul>\n<li>排序 $A,B$：$O(n\\log n)$。</li>\n<li>按门槛排序各组：$O(m\\log m)$。</li>\n<li>解锁与双指针计数：$O(n+m)$。</li>\n</ul>\n<p>总时间复杂度为 $O(n\\log n)$，空间复杂度为 $O(n)$。</p>\n<p>设所有测试的长度总和为 $N\\le 2\\times10^5$，总时间为 $O(N\\log N)$，满足数据范围。</p>\n<h2>边界与易错点</h2>\n<ol>\n<li><strong>值可能远大于 n。</strong> 不应按数值范围枚举。本算法只处理实际出现的值。对于 $k&gt;n$，必然无法满足 $f+c_k\\ge k$，因此目标中的这些副本全部必须由起点保留。</li>\n<li><strong>0 和 1 的组都可以直接解锁。</strong> 它们只要出现，就分别满足 $c_0\\ge 0$、$c_1\\ge 1$。</li>\n<li><strong>必须按门槛 k-c_k 排序。</strong> 按数值大小排序并提前停止可能得到错误结果。</li>\n<li><strong>必须比较出现次数。</strong> 只检查某个核心值是否存在是不够的。</li>\n<li><strong>允许零次操作。</strong> 若 $A=B$，无论是否存在可解锁的组，都应输出 YES。</li>\n<li><strong>改写引理只用于证明。</strong> 不需要模拟其中可能很长的操作序列，也不能把指定改写误认为一次原操作。</li>\n<li>实现使用 <code>long long</code> 保存数值和门槛，避免混合计算时出现类型问题。</li>\n</ol>\n<h2>C++17 参考实现</h2>\n<pre><code>#include &lt;bits/stdc++.h&gt;\nusing namespace std;\n\nstruct Group {\n    long long value;\n    int count;\n};\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n\n    int T;\n    cin &gt;&gt; T;\n    while (T--) {\n        int n;\n        cin &gt;&gt; n;\n\n        vector&lt;long long&gt; a(n), b(n);\n        for (auto &amp;x : a) cin &gt;&gt; x;\n        for (auto &amp;x : b) cin &gt;&gt; x;\n\n        sort(a.begin(), a.end());\n        sort(b.begin(), b.end());\n\n        vector&lt;Group&gt; groups;\n        groups.reserve(n);\n        for (int i = 0; i &lt; n; ) {\n            int j = i + 1;\n            while (j &lt; n &amp;&amp; b[j] == b[i]) ++j;\n            groups.push_back({b[i], j - i});\n            i = j;\n        }\n\n        int m = static_cast&lt;int&gt;(groups.size());\n        vector&lt;int&gt; order(m);\n        iota(order.begin(), order.end(), 0);\n        sort(order.begin(), order.end(), [&amp;](int x, int y) {\n            long long dx = groups[x].value - groups[x].count;\n            long long dy = groups[y].value - groups[y].count;\n            return dx &lt; dy;\n        });\n\n        vector&lt;char&gt; unlocked(m, false);\n        long long free_count = 0;\n        for (int id : order) {\n            long long threshold = groups[id].value - groups[id].count;\n            if (threshold &gt; free_count) break;\n            unlocked[id] = true;\n            free_count += groups[id].count;\n        }\n\n        bool possible = true;\n        int ptr = 0;\n        for (int i = 0; i &lt; m; ++i) {\n            long long value = groups[i].value;\n            while (ptr &lt; n &amp;&amp; a[ptr] &lt; value) ++ptr;\n            int start = ptr;\n            while (ptr &lt; n &amp;&amp; a[ptr] == value) ++ptr;\n            int have = ptr - start;\n\n            if (!unlocked[i] &amp;&amp; have &lt; groups[i].count) {\n                possible = false;\n                break;\n            }\n        }\n\n        cout &lt;&lt; (possible ? &quot;YES&quot; : &quot;NO&quot;) &lt;&lt; &#x27;\\n&#x27;;\n    }\n\n    return 0;\n}\n</code></pre>\n<h2>验证范围</h2>\n<p>非官方模型生成题解；C++17 编译通过，通过 1 组原题样例，通过 17210 组独立小数据校验，通过最大规模数据检查。未在 QOJ 在线提交验证。</p>\n<p>只判定可达性，不构造可能很长的操作序列；题目本身不要求输出操作。</p>"
+      }
+    },
+    {
+      "id": "ccpc-2026-荆州:L",
+      "site": "荆州",
+      "series": "CCPC",
+      "contest": "2026 CCPC 荆州站",
+      "date": "2026-11-15",
+      "index": "L",
+      "title": "均衡切割（Length-Balanced Cuts）",
+      "url": "https://qoj.ac/contest/4706/problem/25416",
+      "statement": {
+        "title": "L. 均衡切割（Length-Balanced Cuts）",
+        "description": "<p>Bobo 正在上木工课。今天的任务是把一根长度为 $X$ 的木条切成若干根短木条，使每根木条的长度都不超过 $B$。</p>\n<p>每次切割操作，Bobo可以选择当前任意一根木条，将它切成两根长度差不超过 $D$ 的木条。\n切出的木条还可以继续切割。所有木料都必须保留，也不能将木条重新拼接。</p>\n<p>请你帮 Bobo 求出完成任务所需的最少操作次数。如果原木条的长度已经不超过 $B$，则答案为 $0$。</p>",
+        "input": "<p>第一行包含一个整数 $T$（$1\\le T\\le 1000$），表示独立测试数据的组数。</p>\n<p>接下来 $T$ 行，每行包含三个整数 $X,B,D$（$1\\le X,B,D\\le 10^9$）。</p>",
+        "output": "<p>对于每组测试数据，输出一行一个整数，表示最少操作次数。</p>",
+        "hint": "<p>当 $X=6,B=2,D=1$ 时，先切成两根长度为 $3$ 的木条，再将它们分别切成长度为 $1.5$ 和 $1.5$ 的木条，共需 $3$ 次操作。</p>\n<p>当 $X=6,B=2,D=2$ 时，可以先切成长度为 $2$ 和 $4$ 的木条，再将长度为 $4$ 的木条切成两根长度为 $2$ 的木条，共需 $2$ 次操作。</p>",
+        "samples": [
+          {
+            "input": "4\n1 1 1\n6 2 1\n6 2 2\n9 3 2",
+            "output": "0\n3\n2\n3"
+          },
+          {
+            "input": "3\n18 3 2\n10 20 1\n1000000000 1 1000000000",
+            "output": "6\n0\n999999999"
+          }
+        ],
+        "sourceUrl": "https://qoj.ac/contest/4706/problem/25416/statement/zh_cn"
+      },
+      "statementSource": {
+        "contest_url": "https://qoj.ac/contest/4706",
+        "attribution": "2026 CCPC 荆州站，QOJ 中文题面",
+        "verified_at": "2026-11-17",
+        "access": "经用户授权的 QOJ 登录态读取；发布文件不包含账号、Cookie 或令牌。",
+        "processing": "完整保留原文、TeX、输入输出、交互协议、所有样例及本地配图。",
+        "problems": {
+          "A": {
+            "qoj_id": 25405,
+            "url": "https://qoj.ac/contest/4706/problem/25405/statement/zh_cn",
+            "article_sha256": "8de90e12437e7327489c5d2fedc851b208e9c73e2fb9ef341544bb02ad7dc71b",
+            "sample_count": 1,
+            "images": [
+              {
+                "url": "https://qoj.ac/images/problems/problem_25405_1.png",
+                "local": "/statement-nov17-2026-problem_25405_1.png",
+                "sha256": "5a4890a5566b348e6d6104d0dae6d0f136f311b1a42ec6f22d19619c84fbdfa1"
+              }
+            ]
+          },
+          "B": {
+            "qoj_id": 25406,
+            "url": "https://qoj.ac/contest/4706/problem/25406/statement/zh_cn",
+            "article_sha256": "63677e5d48565e03e5bcbb87eec241d367ffc077329c83c9888904ddaf9fa69b",
+            "sample_count": 3,
+            "images": []
+          },
+          "C": {
+            "qoj_id": 25407,
+            "url": "https://qoj.ac/contest/4706/problem/25407/statement/zh_cn",
+            "article_sha256": "de6991c2c4d088e233b5f7a3538328e7f3a6f8bbbf4a444947085bd650142f10",
+            "sample_count": 1,
+            "images": []
+          },
+          "D": {
+            "qoj_id": 25408,
+            "url": "https://qoj.ac/contest/4706/problem/25408/statement/zh_cn",
+            "article_sha256": "243f610ac3f9a76dcce2a3dd6ebfe6cc85171d04c65f442b3777e7da2351c95b",
+            "sample_count": 1,
+            "images": []
+          },
+          "E": {
+            "qoj_id": 25409,
+            "url": "https://qoj.ac/contest/4706/problem/25409/statement/zh_cn",
+            "article_sha256": "4767461a228fe9804c1dfda994ec22edab3f7cee1210834e044c524db330d1a1",
+            "sample_count": 3,
+            "images": []
+          },
+          "F": {
+            "qoj_id": 25410,
+            "url": "https://qoj.ac/contest/4706/problem/25410/statement/zh_cn",
+            "article_sha256": "e8948f5640c14c550c975e7a64e494cdbcc1e7136e77abb099783787a61f1cc6",
+            "sample_count": 2,
+            "images": []
+          },
+          "G": {
+            "qoj_id": 25411,
+            "url": "https://qoj.ac/contest/4706/problem/25411/statement/zh_cn",
+            "article_sha256": "4b00d2b6ce7d1883417bbaba749ab2a26d011e2cc37f209fcab9c90026058469",
+            "sample_count": 1,
+            "images": []
+          },
+          "H": {
+            "qoj_id": 25412,
+            "url": "https://qoj.ac/contest/4706/problem/25412/statement/zh_cn",
+            "article_sha256": "5cb3ed7618ba2896a426a8c1c8043d73acc6f2e7c35d9ad86f1abf51b48129b1",
+            "sample_count": 1,
+            "images": []
+          },
+          "I": {
+            "qoj_id": 25413,
+            "url": "https://qoj.ac/contest/4706/problem/25413/statement/zh_cn",
+            "article_sha256": "8356a73d9989793cb12a6aab167a984b27da1be64130514aecc286917a4fd996",
+            "sample_count": 1,
+            "images": []
+          },
+          "J": {
+            "qoj_id": 25414,
+            "url": "https://qoj.ac/contest/4706/problem/25414/statement/zh_cn",
+            "article_sha256": "4d6c483cc64d019205c1a28a69daacc5c11cad5bfd4d4ba77aa11cdc6657b5f9",
+            "sample_count": 3,
+            "images": [
+              {
+                "url": "https://qoj.ac/images/problems/problem_25414_3.png",
+                "local": "/statement-nov17-2026-problem_25414_3.png",
+                "sha256": "4b0e6974af14efc4664acf4c0285b7eca62d29c1be6b2ea061e281fe4714ca48"
+              }
+            ]
+          },
+          "K": {
+            "qoj_id": 25415,
+            "url": "https://qoj.ac/contest/4706/problem/25415/statement/zh_cn",
+            "article_sha256": "cddc3b9e2fe865a2c10126625b98a32889555bd8ea40e6017e466811ca2246e0",
+            "sample_count": 2,
+            "images": [
+              {
+                "url": "https://qoj.ac/images/problems/problem_25415_1.png",
+                "local": "/statement-nov17-2026-problem_25415_1.png",
+                "sha256": "2f5e0fe1e2b7465ebfb4180a552e5e88c85a36ce3b2c8d00929c02d490d0f3ce"
+              },
+              {
+                "url": "https://qoj.ac/images/problems/problem_25415_2.png",
+                "local": "/statement-nov17-2026-problem_25415_2.png",
+                "sha256": "f1d60cbffe4b9adf2d75f390b57fab4fd5fd2826c62cdf114bdf9f79550f5dd3"
+              },
+              {
+                "url": "https://qoj.ac/images/problems/problem_25415_3.png",
+                "local": "/statement-nov17-2026-problem_25415_3.png",
+                "sha256": "9d0cbd0d6c487d8be961bf80c51f8ee3d77d273074aa956e735decb0f7dae2b3"
+              }
+            ]
+          },
+          "L": {
+            "qoj_id": 25416,
+            "url": "https://qoj.ac/contest/4706/problem/25416/statement/zh_cn",
+            "article_sha256": "f87e717379fa924256fe42c9694c81b628b330264a5ee526618f5a866a40cbe1",
+            "sample_count": 2,
+            "images": []
+          },
+          "M": {
+            "qoj_id": 25417,
+            "url": "https://qoj.ac/contest/4706/problem/25417/statement/zh_cn",
+            "article_sha256": "75fa6326cfe1981691a98641c744641905fa511b22b397b220193c6506c9da10",
+            "sample_count": 2,
+            "images": []
+          },
+          "N": {
+            "qoj_id": 25418,
+            "url": "https://qoj.ac/contest/4706/problem/25418/statement/zh_cn",
+            "article_sha256": "97f114d4b63524cad21ca09bf858f1368fa0fa8faa81b36d745f2ed86653d835",
+            "sample_count": 1,
+            "images": []
+          }
+        }
+      },
+      "editorial": {
+        "problemId": "ccpc-2026-荆州:L",
+        "view": "full",
+        "revision": "2026-11-17-independent-v1",
+        "source": {
+          "title": "2026 荆州站独立参考题解（非官方）",
+          "author": "gpt-6-astra 生成，Codex 校验与整理",
+          "url": "https://qoj.ac/contest/4706",
+          "contest_url": "https://qoj.ac/contest/4706",
+          "note": "根据已缓存的 QOJ 中文题面独立生成。验证范围逐题注明；本批未进行在线判题，不代表官方题解或在线 AC。"
+        },
+        "pages": [],
+        "validation": "非官方模型生成题解；C++17 编译通过，通过 2 组原题样例，通过 12000 组独立小数据校验。未在 QOJ 在线提交验证。",
+        "html": "<h1>均衡切割：二次幂分段的最大容量</h1>\n<h2>先学什么</h2>\n<ul>\n<li><strong>二叉树与切割过程</strong>：每次切割对应一个内部结点，最终木条对应叶子。</li>\n<li><strong>缩放可行性</strong>：把合法方案中的所有长度同比例缩短，方案仍然合法。</li>\n<li><strong>归纳证明最优性</strong>：既要构造达到上界的方案，也要证明任何其他切法都不能超过上界。</li>\n<li><strong>二次幂分段与向上取整</strong>：最终的容量函数在相邻二次幂之间是线性的。</li>\n</ul>\n<h2>题意</h2>\n<p>初始有一根长度为 $X$ 的木条。每次可以把一根木条切成两根，但两根的长度差不能超过 $D$。目标是让所有最终木条的长度都不超过 $B$，求最少切割次数。</p>\n<p><strong>木条长度可以是实数</strong>，并不要求切出整数长度。</p>\n<p>每次切割使木条数量增加一，因此最终得到 $n$ 根木条时，恰好进行了 $n-1$ 次切割。我们只需求最少的最终木条数。</p>\n<h2>核心推导</h2>\n<h3>1. 当 $D\\ge B$ 时，体积下界可以达到</h3>\n<p>由于每根最终木条不超过 $B$，必有</p>\n<p>$$\nn\\ge \\left\\lceil\\frac XB\\right\\rceil.\n$$</p>\n<p>令 $n=\\lceil X/B\\rceil$，把木条划分为 $n$ 根等长木条，每根长度为 $t=X/n\\le B$。</p>\n<p>可以按最终木条数量递归切割：需要产生 $k$ 根时，把它分为分别包含 $\\lfloor k/2\\rfloor$ 根和 $\\lceil k/2\\rceil$ 根的两部分。两部分的长度差为 $0$ 或 $t$，不超过 $B\\le D$。</p>\n<p>所以此时答案就是</p>\n<p>$$\n\\boxed{\\left\\lceil\\frac XB\\right\\rceil-1}.\n$$</p>\n<p>下面只研究 $D&lt;B$。</p>\n<h3>2. 固定最终木条数，求最大可处理长度</h3>\n<p>定义 $F(n)$：恰好切成 $n$ 根长度不超过 $B$ 的木条时，原木条能够达到的最大长度。</p>\n<p>一个重要性质是：如果某个长度 $L$ 可以用 $n$ 根最终木条处理，那么任意 $0&lt;L&#x27;\\le L$ 也可以。只需把整个方案中的长度乘以 $L&#x27;/L$，最终木条长度和每次切割的长度差都会缩小。</p>\n<p>因此，只要知道 $F(n)$，就能判断长度 $X$ 能否用 $n$ 根最终木条处理：</p>\n<p>$$\nX\\le F(n).\n$$</p>\n<p>令</p>\n<p>$$\nP(n)=2^{\\lfloor\\log_2 n\\rfloor},\n$$</p>\n<p>即不超过 $n$ 的最大二次幂。关键结论是</p>\n<p>$$\n\\boxed{F(n)=nD+(B-D)P(n)}.\n$$</p>\n<p>等价地，对于二次幂 $p$，当 $p\\le n&lt;2p$ 时，</p>\n<p>$$\n\\boxed{F(n)=pB+(n-p)D}.\n$$</p>\n<p>这说明：</p>\n<ul>\n<li>当 $n=p$ 为二次幂时，容量是 $pB$，可以通过反复等分达到。</li>\n<li>在下一个二次幂之前，每增加一根最终木条，最大容量只增加 $D$。</li>\n<li>到达下一个二次幂时，容量跳到 $2pB$。</li>\n</ul>\n<p>例如 $B=3,D=2$ 时，$n=1,2,\\ldots,8$ 对应的最大容量为</p>\n<p>$$\n3,6,8,12,14,16,18,24.\n$$</p>\n<p>不能简单地认为 $n$ 根木条就一定能处理长度 $nB$，因为中间的切割也必须满足长度差限制。</p>\n<h3>3. 为什么会出现这个公式</h3>\n<p>上述函数满足以下关系。对于 $m\\ge1$，</p>\n<p>$$\nF(2m)=2F(m),\n$$</p>\n<p>$$\nF(2m+1)=2F(m)+D.\n$$</p>\n<p>同时，因为 $B-D&gt;0$，</p>\n<p>$$\nF(m+1)-F(m)\n=D+(B-D)\\bigl(P(m+1)-P(m)\\bigr)\\ge D.\n$$</p>\n<p>这提示我们按最终木条数尽量均分：</p>\n<ul>\n<li>$2m$ 根：第一刀切成两段长度均为 $F(m)$ 的木条。</li>\n<li>$2m+1$ 根：第一刀切成长度为 $F(m)$ 和 $F(m)+D$ 的两段。第二段不超过 $F(m+1)$，可以继续得到 $m+1$ 根木条。</li>\n</ul>\n<p>这能构造出公式中的容量。不过，仅有构造还不够；必须证明其他划分不会更优，完整证明见后文。</p>\n<h3>4. 直接反解最少木条数</h3>\n<p>现在假设 $X&gt;B$ 且 $D&lt;B$。</p>\n<p>从 $p=1$ 开始倍增，找到满足</p>\n<p>$$\npB&lt;X\\le2pB\n$$</p>\n<p>的二次幂 $p$。</p>\n<p>首先，少于 $p$ 根最终木条不可能容纳长度 $X$，因为即使每根都取满 $B$，总长度也小于 $pB&lt;X$。</p>\n<p>对于 $p\\le n&lt;2p$，由容量公式，必须满足</p>\n<p>$$\npB+(n-p)D\\ge X.\n$$</p>\n<p>所以这一段内的候选答案为</p>\n<p>$$\nn_0=p+\\left\\lceil\\frac{X-pB}{D}\\right\\rceil.\n$$</p>\n<p>如果 $n_0&lt;2p$，它就是最少木条数；否则直接使用 $2p$ 根，因为</p>\n<p>$$\nF(2p)=2pB\\ge X.\n$$</p>\n<p>因此</p>\n<p>$$\n\\boxed{n_{\\min}=\\min\\left(2p,\\ p+\\left\\lceil\\frac{X-pB}{D}\\right\\rceil\\right)}.\n$$</p>\n<p>最终输出 $n_{\\min}-1$。</p>\n<p>例如 $X=18,B=3,D=2$：找到 $p=4$，于是</p>\n<p>$$\nn_{\\min}=\\min\\left(8,4+\\left\\lceil\\frac{18-12}{2}\\right\\rceil\\right)=7,\n$$</p>\n<p>最少切割次数为 $6$。</p>\n<h3>5. 算法步骤</h3>\n<ol>\n<li>若 $X\\le B$，输出 $0$。</li>\n<li>否则，若 $D\\ge B$，输出 $\\lceil X/B\\rceil-1$。</li>\n<li>否则，从 $p=1$ 开始，当 $2pB&lt;X$ 时令 $p\\leftarrow2p$。</li>\n<li>计算 $q=\\lceil(X-pB)/D\\rceil$，输出 $\\min(2p,p+q)-1$。</li>\n</ol>\n<h2>正确性证明</h2>\n<h3>引理一：合法方案可以整体缩短</h3>\n<p>设一个合法方案处理长度 $L$，并得到 $n$ 根最终木条。对于任意 $0&lt;L&#x27;\\le L$，令所有长度乘以 $c=L&#x27;/L\\le1$。</p>\n<p>每根最终木条仍不超过 $B$，每次切割的两段长度差仍不超过 $D$，切割树和叶子数也不变。因此，长度 $L&#x27;$ 同样可以用 $n$ 根最终木条处理。引理成立。</p>\n<h3>引理二：当 $D&lt;B$ 时，最大容量为 $F(n)=nD+(B-D)P(n)$</h3>\n<p>对 $n$ 归纳，同时证明这个值是上界且能够达到。</p>\n<p><strong>基础情况。</strong> $n=1$ 时不能切割，最大长度为 $B$，而公式也给出 $F(1)=B$。</p>\n<p><strong>上界。</strong> 考虑任意一个产生 $n&gt;1$ 根最终木条的合法方案。第一刀得到长度为 $u,v$ 的两段，它们最终分别产生 $a,b$ 根木条。不妨令 $a\\le b$，且 $a+b=n$。</p>\n<p>由归纳假设，$u\\le F(a)$、$v\\le F(b)$。</p>\n<ul>\n<li>若 $a=b$，则</li>\n</ul>\n<p>$$\n  u+v\\le2F(a)=F(2a)=F(n).\n  $$</p>\n<ul>\n<li>若 $a&lt;b$，由第一刀合法可得 $v\\le u+D$，所以</li>\n</ul>\n<p>$$\n  u+v\\le2u+D\\le2F(a)+D.\n  $$</p>\n<p>又因为 $n\\ge2a+1$，所以 $P(n)\\ge2P(a)$。利用 $B-D&gt;0$，得到</p>\n<p>$$\n  \\begin{aligned}\n  2F(a)+D\n  &amp;=(2a+1)D+2(B-D)P(a)\\\\\n  &amp;\\le nD+(B-D)P(n)\\\\\n  &amp;=F(n).\n  \\end{aligned}\n  $$</p>\n<p>注意这里按<strong>最终木条数量</strong>选择 $a\\le b$，并没有假设 $u\\le v$；由长度差限制得到的 $v\\le u+D$ 始终成立。</p>\n<p>所以任何方案的原木条长度都不超过 $F(n)$。</p>\n<p><strong>可达性。</strong></p>\n<ul>\n<li>若 $n=2m$，将长度 $F(n)=2F(m)$ 的木条等分为两段 $F(m)$。第一刀长度差为零，两段分别由归纳假设产生 $m$ 根合格木条。</li>\n<li>若 $n=2m+1$，将长度 $F(n)=2F(m)+D$ 的木条切成 $F(m)$ 和 $F(m)+D$。第一刀长度差恰好为 $D$。由于 $F(m+1)\\ge F(m)+D$，由归纳假设及引理一，第二段可以产生 $m+1$ 根合格木条，第一段可以产生 $m$ 根。</li>\n</ul>\n<p>因此 $F(n)$ 能够达到。结合上界，容量公式成立。</p>\n<h3>定理：算法输出最少切割次数</h3>\n<ul>\n<li>当 $X\\le B$ 时，无需切割，输出 $0$ 最优。</li>\n<li>当 $D\\ge B$ 时，总长度给出至少 $\\lceil X/B\\rceil$ 根木条的下界，而等长木条的递归构造达到此下界。</li>\n<li>当 $D&lt;B$ 且 $X&gt;B$ 时，算法找到 $pB&lt;X\\le2pB$。少于 $p$ 根必不可行；在 $[p,2p)$ 中，引理二表明可行性的充要条件是 $n\\ge p+\\lceil(X-pB)/D\\rceil$；而 $2p$ 根一定可行。因此算法计算的正是最少最终木条数。</li>\n</ul>\n<p>每次切割使木条数量增加一，所以最少切割次数为最少最终木条数减一。算法正确。</p>\n<h2>复杂度</h2>\n<p>每组数据只进行二次幂倍增，时间复杂度为 $O(\\log X)$，额外空间复杂度为 $O(1)$。</p>\n<p>在 $X\\le10^9$ 时，倍增次数不超过 $30$。全部测试的时间复杂度为 $O(T\\log X_{\\max})$。</p>\n<h2>边界与易错点</h2>\n<ol>\n<li><strong>长度允许为实数。</strong> 不能只考虑整数切割，也不需要使用浮点数模拟具体方案。</li>\n<li><strong>答案是木条数减一。</strong> 容量公式对应的是最终木条数量，而不是切割次数。</li>\n<li><strong>$D\\ge B$ 必须单独处理。</strong> 此时最少木条数就是体积下界；不能直接套用以 $D&lt;B$ 为前提的分段公式。</li>\n<li><strong>容量在二次幂处会跳跃。</strong> 若线性反解得到的数量超出当前区间，直接使用下一二次幂 $2p$，因此公式中必须取最小值。</li>\n<li><strong>倍增使用严格条件 $2pB&lt;X$。</strong> 退出时保证 $pB&lt;X\\le2pB$，包括 $X=2pB$ 的情况。</li>\n<li><strong>向上取整使用整数运算。</strong> 对正整数 $a,d$，$\\lceil a/d\\rceil=(a+d-1)/d$。题目保证 $D\\ge1$，不会除零。</li>\n<li><strong>使用 64 位整数。</strong> 输入、乘法、向上取整及答案统一使用 <code>long long</code>，避免中间表达式的溢出风险。</li>\n</ol>\n<h2>C++17 参考实现</h2>\n<pre><code>#include &lt;bits/stdc++.h&gt;\nusing namespace std;\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n\n    int T;\n    cin &gt;&gt; T;\n\n    while (T--) {\n        long long X, B, D;\n        cin &gt;&gt; X &gt;&gt; B &gt;&gt; D;\n\n        if (X &lt;= B) {\n            cout &lt;&lt; 0 &lt;&lt; &#x27;\\n&#x27;;\n            continue;\n        }\n\n        if (D &gt;= B) {\n            long long pieces = (X + B - 1) / B;\n            cout &lt;&lt; pieces - 1 &lt;&lt; &#x27;\\n&#x27;;\n            continue;\n        }\n\n        long long p = 1;\n        while (2LL * p * B &lt; X) {\n            p *= 2;\n        }\n\n        long long remaining = X - p * B;\n        long long extra = (remaining + D - 1) / D;\n        long long pieces = min(2LL * p, p + extra);\n\n        cout &lt;&lt; pieces - 1 &lt;&lt; &#x27;\\n&#x27;;\n    }\n\n    return 0;\n}\n</code></pre>\n<h2>验证范围</h2>\n<p>非官方模型生成题解；C++17 编译通过，通过 2 组原题样例，通过 12000 组独立小数据校验。未在 QOJ 在线提交验证。</p>"
+      }
+    },
+    {
+      "id": "ccpc-2026-长春:E",
+      "site": "长春",
+      "series": "CCPC",
+      "contest": "2026 CCPC 长春站",
+      "date": "2026-10-18",
+      "index": "E",
+      "title": "遍历",
+      "url": "https://qoj.ac/contest/4582/problem/22914",
+      "statement": {
+        "title": "E. 遍历",
+        "description": "<p>给定四个整数 $n,a_1,a_2,a_3$，其中 $a_1+a_2+a_3=n-1$。判断是否存在一棵 $n$ 个点的树，以及一个 $1\\sim n$ 的排列 $p_1,p_2,\\ldots,p_n$，使得：</p>\n<ul>\n<li>对 $k=1,2,3$，恰好有 $a_k$ 个下标 $i$ 满足 $1\\le i&lt;n$，且节点 $p_i$ 与 $p_{i+1}$ 在树上的距离恰好为 $k$。</li>\n</ul>\n<p>如果答案存在，还需要输出一组合法答案。一个长度为 $n$ 的排列包含 $1\\sim n$ 中每个正整数恰好一次。</p>\n<p><strong>时间限制：</strong>1 秒。<strong>空间限制：</strong>512 MB。</p>",
+        "input": "<p>第一行包含整数 $T$（$1\\le T\\le10^3$），表示测试数据组数。</p>\n<p>每组数据包含一行四个整数 $n,a_1,a_2,a_3$（$8\\le n\\le2\\times10^5$，$0\\le a_1,a_2,a_3\\le n-1$，$a_1+a_2+a_3=n-1$）。</p>\n<p>保证单个测试点内所有测试数据的 $n$ 之和不超过 $2\\times10^5$。</p>",
+        "output": "<p>对于每组测试数据：</p>\n<ul>\n<li>若存在满足条件的树与排列，先输出 $n-1$ 行，每行两个整数 $u,v$（$1\\le u,v\\le n$，$u\\ne v$），表示所有树边；然后输出一行 $n$ 个正整数，表示排列 $p_1,p_2,\\ldots,p_n$。若有多解，输出任意一解即可。</li>\n<li>否则输出一行 <code>-1</code>。</li>\n</ul>",
+        "hint": "<p>第三组测试数据的树边为 $(1,2),(1,3),(3,4),(3,5),(5,6),(5,7),(7,8)$。输出排列为 $p=[2,3,1,7,4,6,5,8]$，其中：</p>\n<ul>\n<li>距离为 $1$ 的相邻点对为 $(3,1),(6,5)$，共 $a_1=2$ 对；</li>\n<li>距离为 $2$ 的相邻点对为 $(2,3),(5,8)$，共 $a_2=2$ 对；</li>\n<li>距离为 $3$ 的相邻点对为 $(1,7),(7,4),(4,6)$，共 $a_3=3$ 对。</li>\n</ul>",
+        "samples": [
+          {
+            "input": "3\n8 0 7 0\n8 7 0 0\n8 2 2 3",
+            "output": "-1\n1 2\n2 3\n3 4\n4 5\n5 6\n6 7\n7 8\n1 2 3 4 5 6 7 8\n1 2\n1 3\n3 4\n3 5\n5 6\n5 7\n7 8\n2 3 1 7 4 6 5 8"
+          }
+        ],
+        "sourceUrl": "https://qoj.ac/download.php?id=22914&type=statement"
+      },
+      "statementSource": {
+        "attribution": "2026 第十二届中国大学生程序设计竞赛（长春站）官方中文题面；按原 PDF 整理，树形配图改为等价边表说明。"
+      },
+      "editorial": {
+        "problemId": "ccpc-2026-长春:E",
+        "view": "full",
+        "revision": "2026-11-14.1",
+        "source": {
+          "title": "2026 中国大学生程序设计竞赛（长春站）官方题解",
+          "author": "清华大学学生算法协会（THUSAA）",
+          "url": "https://qoj.ac/download.php?type=attachments&id=4582&r=1",
+          "contest_url": "https://qoj.ac/contest/4582",
+          "statement_url": "https://qoj.ac/download.php?type=attachments&id=4582&r=0",
+          "sha256": "9fd458adc36323a41d06582e0dc614f07bf17db8462c9e7d3a10bf2820afef9f",
+          "verified_at": "2026-11-14",
+          "note": "依据官方讲义重新组织与扩写；示例、展开证明及验证程序为本工程补充。页码为 PDF 实际页码（含动画重复页）。 参考代码补齐并在线验证：13/13 份 C++17 实现已通过 QOJ，具体提交链接见各题。"
+        },
+        "pages": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "validation": "独立离线校验通过；完整 C++17 实现已通过 QOJ 正式评测（提交 3453191，19 ms，6268 KB）。",
+        "html": "<h1>E · 遍历</h1>\n<h2>先学什么</h2>\n<p>需要理解树上的距离、二分染色和构造算法中的“不变量”。不用先学 LCA。先在纸上画一条两边路径 <code>x—p—q</code>：挂一个新叶子到 x、p、q 上，它与 x 的距离分别是多少？答案 1、2、3 就是本题的扩展工具。</p>\n<h2>先证明唯一的无解情形</h2>\n<p>记 a=a1、b=a2、c=a3。如果 a=c=0，每次在排列中移动都走距离 2，是偶数步。树二分染色后，偶数距离的两点颜色相同。因此整个访问排列只能停在同一侧，不可能覆盖树的所有点。此时输出 -1。</p>\n<p>下面构造所有 a+c&gt;0 的情况。n≥8 是关键约束，不应把后面的结论直接推广到更小的 n。</p>\n<h2>可重复使用的接口</h2>\n<p>当前访问排列的最后一个点为 x，并维护树中的路径 <code>x—p—q</code>。三点均已在排列中出现。增加一个此前不存在的新点 y 后，把 y 加到排列末尾：</p>\n<table>\n<thead>\n<tr>\n<th>希望增加的距离</th>\n<th>增加的边</th>\n<th>新接口 <code>(x,p,q)</code></th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>1</td>\n<td>x—y</td>\n<td><code>(y,旧x,旧p)</code></td>\n</tr>\n<tr>\n<td>2</td>\n<td>p—y</td>\n<td><code>(y,旧p,旧q)</code></td>\n</tr>\n<tr>\n<td>3</td>\n<td>q—y</td>\n<td><code>(y,旧q,旧p)</code></td>\n</tr>\n</tbody>\n</table>\n<p>每次只增加一个叶子，仍然是树；旧点之间的距离不会改变；新排列只多了一对相邻点，恰好贡献所需的距离。最关键的是，新接口仍是一条两边路径，下一次可以继续使用。这把“构造任意大答案”变成了“找到一个足够小的起始答案”。</p>\n<h2>c&gt;0：从六个小种子开始</h2>\n<p>下表的 <code>12</code> 表示边 <code>(1,2)</code>。种子来自官方构造，表中已把选择条件展开。</p>\n<table>\n<thead>\n<tr>\n<th>条件</th>\n<th>起始 <code>(a,b,c)</code></th>\n<th>树边</th>\n<th>访问顺序</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>a&gt;0,b&gt;0</td>\n<td>(1,1,1)</td>\n<td>12,23,14</td>\n<td>1,2,4,3</td>\n</tr>\n<tr>\n<td>a≥2,b=0</td>\n<td>(2,0,1)</td>\n<td>12,23,14</td>\n<td>1,2,3,4</td>\n</tr>\n<tr>\n<td>a=0,b≥2</td>\n<td>(0,2,1)</td>\n<td>12,23,14</td>\n<td>1,3,4,2</td>\n</tr>\n<tr>\n<td>a=1,b=0</td>\n<td>(1,0,4)</td>\n<td>12,23,14,16,45</td>\n<td>1,2,5,6,3,4</td>\n</tr>\n<tr>\n<td>a=0,b=1</td>\n<td>(0,1,5)</td>\n<td>12,23,15,17,34,56</td>\n<td>1,4,2,6,7,3,5</td>\n</tr>\n<tr>\n<td>a=b=0</td>\n<td>(0,0,7)</td>\n<td>12,23,34,25,16,67,18</td>\n<td>1,4,5,6,3,8,7,2</td>\n</tr>\n</tbody>\n</table>\n<p>先从目标计数减掉种子计数。后三行的 c 为什么够用？例如 a=1,b=0 时，c=n−2≥6，当然够起始的 4；其余两行同样由 n≥8 推出。每个种子的末点都有长度 2 的路径，可以在小树内找出接口。</p>\n<p>之后按剩余的 a、b、c 次数，用上面的三种扩展补足即可。最终增加的点数等于新增相邻对数，因此总点数自动为 n。</p>\n<h2>一个扩展示例</h2>\n<p>目标 n=8、(a,b,c)=(2,2,3)。先选 (1,1,1) 种子，末点是 3，接口可取 <code>3—2—1</code>。</p>\n<p>需要再补距离 <code>1,2,3,3</code>。加点5，连接3—5，接口变为5—3—2；加点6，连接3—6，接口变为6—3—2；加点7，连接2—7，接口变为7—2—3；加点8，连接3—8。把 5,6,7,8 依次追加到种子排列后即可。</p>\n<h2>c=0：单独处理</h2>\n<p>此时 a&gt;0。若 b=0，直接用一条链按顺序访问，所有距离为 1。</p>\n<p>若 b&gt;0，先建立含 b+2 个点的链，临时编号 <code>0—1—…—(b+1)</code>。按递增顺序访问全部偶数编号，再按递减顺序访问全部奇数编号。同一奇偶段内跳 2，两段交接处跳 1，恰有 b 次距离2、1次距离1。最后从排列末点向外接 a−1 个链点，并依次访问。输出时统一把临时编号转成 1 下标。</p>\n<h2>正确性、复杂度与自测</h2>\n<p>无解由二分染色证明；有解由种子与保持接口的扩展证明，两个方向齐全。构造和输出都是 O(n)，空间 O(n)。</p>\n<p>不要只检查边数。验证器还应该检查：连通无环、排列包含每个点恰好一次、每对相邻排列元素的真实距离为 1/2/3 且各自计数正确。可以穷举 n=8..30 的所有计数组合，这比肉眼检查几张示意图可靠得多。</p>\n<h2>完整代码（C++17）</h2>\n<pre><code>#include &lt;array&gt;\n#include &lt;iostream&gt;\n#include &lt;utility&gt;\n#include &lt;vector&gt;\nusing namespace std;\nint main(){ios::sync_with_stdio(false);cin.tie(nullptr);int T;cin&gt;&gt;T;while(T--){int n,a,b,c;cin&gt;&gt;n&gt;&gt;a&gt;&gt;b&gt;&gt;c;if(!a&amp;&amp;!c){cout&lt;&lt;-1&lt;&lt;&#x27;\\n&#x27;;continue;}vector&lt;pair&lt;int,int&gt;&gt;edges;vector&lt;int&gt;order;int used=0;\n    if(!c){used=b+2;for(int i=1;i&lt;used;++i)edges.push_back({i,i+1});for(int i=1;i&lt;=used;i+=2)order.push_back(i);for(int i=(used/2)*2;i&gt;=2;i-=2)order.push_back(i);for(int j=0;j&lt;a-1;++j){edges.push_back({order.back(),++used});order.push_back(used);}}\n    else{\n        array&lt;int,3&gt;seed;\n        if(a&amp;&amp;b){seed={1,1,1};edges={{1,2},{2,3},{1,4}};order={1,2,4,3};}\n        else if(a&gt;=2){seed={2,0,1};edges={{1,2},{2,3},{1,4}};order={1,2,3,4};}\n        else if(b&gt;=2){seed={0,2,1};edges={{1,2},{2,3},{1,4}};order={1,3,4,2};}\n        else if(a){seed={1,0,4};edges={{1,2},{2,3},{1,4},{1,6},{4,5}};order={1,2,5,6,3,4};}\n        else if(b){seed={0,1,5};edges={{1,2},{2,3},{1,5},{1,7},{3,4},{5,6}};order={1,4,2,6,7,3,5};}\n        else{seed={0,0,7};edges={{1,2},{2,3},{3,4},{2,5},{1,6},{6,7},{1,8}};order={1,4,5,6,3,8,7,2};}\n        used=order.size();vector&lt;vector&lt;int&gt;&gt;g(used+1);for(auto [u,v]:edges){g[u].push_back(v);g[v].push_back(u);}int x=order.back(),p=-1,q=-1;for(int v:g[x])for(int w:g[v])if(w!=x){p=v;q=w;}\n        array&lt;int,3&gt;left={a-seed[0],b-seed[1],c-seed[2]};\n        for(int d=1;d&lt;=3;++d)while(left[d-1]--){int y=++used;if(d==1){edges.push_back({x,y});q=p;p=x;x=y;}else if(d==2){edges.push_back({p,y});x=y;}else{edges.push_back({q,y});int oldP=p;p=q;q=oldP;x=y;}order.push_back(y);}\n    }\n    for(auto [u,v]:edges)cout&lt;&lt;u&lt;&lt;&#x27; &#x27;&lt;&lt;v&lt;&lt;&#x27;\\n&#x27;;for(int i=0;i&lt;n;++i){if(i)cout&lt;&lt;&#x27; &#x27;;cout&lt;&lt;order[i];}cout&lt;&lt;&#x27;\\n&#x27;;\n}}\n</code></pre>\n<h2>在线验证</h2>\n<p>上面的完整 C++17 实现于 2026-11-14 通过 QOJ 正式评测：<a href=\"https://qoj.ac/submission/3453191\" target=\"_blank\" rel=\"noopener noreferrer\">提交 3453191（AC）</a>，用时 19 ms，内存 6268 KB。</p>"
+      }
+    },
+    {
+      "id": "ccpc-2026-长春:I",
+      "site": "长春",
+      "series": "CCPC",
+      "contest": "2026 CCPC 长春站",
+      "date": "2026-10-18",
+      "index": "I",
+      "title": "事不过三",
+      "url": "https://qoj.ac/contest/4582/problem/22918",
+      "statement": {
+        "title": "I. 事不过三",
+        "description": "<p><strong>本题为通信题，程序将独立运行两次。每次输出后必须刷新标准输出缓冲区。</strong></p>\n<p>小 L 与小 S 是一对好朋友。小 L 看到一个长度为 $n$、只包含字符 <code>0</code> 与 <code>1</code> 的字符串 $P$，需要把它传递给小 S。她可以通过打字机发送一个只包含 <code>0</code> 与 <code>1</code> 的字符串 $Q$，但 $Q$ 必须满足：</p>\n<ol>\n<li>长度不超过 $\\lfloor3n/2\\rfloor$；</li>\n<li>任意连续三个字符不能全部相同，即不存在 $1\\le i\\le m-2$，使 $Q_i=Q_{i+1}=Q_{i+2}$，其中 $m=|Q|$，下标从 $1$ 开始。</li>\n</ol>\n<p>请制定传递策略，使小 S 能仅根据 $Q$ 恢复 $P$。</p>\n<p>第一次运行扮演小 L，读入 $P$ 后输出 $Q$；第二次运行扮演小 S，从交互器接收第一次运行的 $Q$，并恢复 $P$。两次运行相互独立，信息由交互器传递。</p>\n<p><strong>时间限制：</strong>2 秒。<strong>空间限制：</strong>512 MB。</p>",
+        "input": "<p>每个测试点包含多组数据。第一行包含两个正整数 $T,r$（$1\\le T\\le2\\times10^4$，$r\\in\\{1,2\\}$），分别表示数据组数和阶段编号。</p>\n<p><strong>第一次运行（$r=1$）：</strong>每组数据先输入整数 $n$（$1\\le n\\le5\\times10^5$），再输入长度为 $n$ 的二进制串 $P$。保证单个测试点内所有 $n$ 之和不超过 $5\\times10^5$。</p>\n<p><strong>第二次运行（$r=2$）：</strong>每组数据先输入整数 $m$，再输入长度为 $m$ 的二进制串 $Q$，即第一次运行发送的信息。第二次运行中各组数据的先后顺序可能与第一次不同。</p>",
+        "output": "<p><strong>第一次运行（$r=1$）：</strong>每组输出两行。第一行为 $m$（$1\\le m\\le\\lfloor3n/2\\rfloor$），第二行为长度为 $m$ 的二进制串 $Q$，其中任意连续三个字符不能全部相同。</p>\n<p><strong>第二次运行（$r=2$）：</strong>每组输出两行。第一行为恢复出的 $P$ 的长度 $n$，第二行为长度为 $n$ 的二进制串 $P$。</p>\n<p>**两种阶段都必须在每组输出后刷新缓冲区，才能继续读取下一组数据。**C/C++ 使用 <code>fflush(stdout)</code> 或 <code>cout.flush()</code>，Java 使用 <code>System.out.flush()</code>，Python 使用 <code>sys.stdout.flush()</code>。</p>",
+        "hint": "<p>样例 1 表示第一次运行，样例 2 表示根据样例 1 的输出，第二次运行的一种可能输入及对应输出。请注意，数据组的顺序发生了变化。</p>\n<p>第一次运行中 $P=111$ 的那组数据，不能发送 $Q=10101$，因为 $m=5&gt;\\lfloor3n/2\\rfloor=4$；也不能发送 $Q=1110$，因为前三个字符相同。</p>\n<h3>本地测试方式</h3>\n<p>官方下发的 <code>triplet_testing_tool.py</code> 可以协助本地测试并打印交互过程。将它与编译后的程序放在同一文件夹，在终端运行：</p>\n<pre><code>python3 triplet_testing_tool.py [--quiet] &lt;data_file&gt; &lt;program&gt; &lt;arguments&gt;\n</code></pre>\n<ul>\n<li><code>-q</code>、<code>--quiet</code> 为可选参数，启用后不打印详细交互过程。</li>\n<li><code>data_file</code> 为输入数据路径。首行是两个非负整数 $T,seed$，分别表示数据组数与打乱数据顺序的随机种子；$seed=0$ 时不打乱。每组数据的格式与第一次运行输入相同。</li>\n<li><code>program</code> 为编译后可执行文件路径，<code>arguments</code> 为额外命令行参数。</li>\n</ul>\n<p>测试工具与实际交互库不完全相同，本地结果仅供调试参考；工具不会监控程序的时间和空间消耗，不能据此判断是否满足时空限制。更多细节请查看脚本源代码。</p>",
+        "samples": [
+          {
+            "input": "3 1\n1\n0\n3\n111\n6\n001100",
+            "output": "1\n0\n4\n0010\n7\n0101010"
+          },
+          {
+            "input": "3 2\n4\n0010\n7\n0101010\n1\n0",
+            "output": "3\n111\n6\n001100\n1\n0"
+          }
+        ],
+        "sourceUrl": "https://qoj.ac/download.php?id=22918&type=statement"
+      },
+      "statementSource": {
+        "attribution": "2026 第十二届中国大学生程序设计竞赛（长春站）官方中文题面；保留两次独立运行、刷新缓冲区要求与本地测试协议。"
+      },
+      "editorial": {
+        "problemId": "ccpc-2026-长春:I",
+        "view": "full",
+        "revision": "2026-11-14.1",
+        "source": {
+          "title": "2026 中国大学生程序设计竞赛（长春站）官方题解",
+          "author": "清华大学学生算法协会（THUSAA）",
+          "url": "https://qoj.ac/download.php?type=attachments&id=4582&r=1",
+          "contest_url": "https://qoj.ac/contest/4582",
+          "statement_url": "https://qoj.ac/download.php?type=attachments&id=4582&r=0",
+          "sha256": "9fd458adc36323a41d06582e0dc614f07bf17db8462c9e7d3a10bf2820afef9f",
+          "verified_at": "2026-11-14",
+          "note": "依据官方讲义重新组织与扩写；示例、展开证明及验证程序为本工程补充。页码为 PDF 实际页码（含动画重复页）。 参考代码补齐并在线验证：13/13 份 C++17 实现已通过 QOJ，具体提交链接见各题。"
+        },
+        "pages": [
+          16,
+          17
+        ],
+        "validation": "独立离线校验通过；完整 C++17 实现已通过 QOJ 正式评测（提交 3453256，68 ms，6044 KB）。",
+        "html": "<h1>I · 事不过三</h1>\n<h2>先学什么</h2>\n<p>需要会扫描字符串的连续相同字符段，以及区分“编码”和“解码”。先把 <code>001011</code> 拆成 <code>00 / 1 / 0 / 11</code>，记下每段长度。不要急着学信息论；本题的核心是把一个原字符编码成一整段。</p>\n<h2>为什么直接替换字符会出问题</h2>\n<p>逐字符规定 <code>0→01、1→10</code> 虽然可以解码，却需要 2n 个字符，超过 1.5n 的预算。我们需要让更常见的字符花费更少。</p>\n<p>设原串 P 中出现次数较多的字符为 b，相同次数时固定选择 0。约定：</p>\n<ul>\n<li>原字符等于 b，编码段长度为 1。</li>\n<li>原字符不等于 b，编码段长度为 2。</li>\n</ul>\n<p>编码段的字符必须交替，才能让接收者看出段与段的边界。规定第一段的字符恰好等于 P 的第一个字符，之后每段交替使用 0、1。注意：段里写的是 0 还是 1，通常不等于它代表的原字符；<strong>真正承载内容的是段长</strong>。</p>\n<h2>编码例子</h2>\n<p>令 P=<code>00100</code>，0 是多数字符 b。五个原字符对应段长 <code>1,1,2,1,1</code>。第一段写 0，随后交替，于是 Q 为：</p>\n<p><code>0 / 1 / 00 / 1 / 0 = 010010</code>。</p>\n<p>每段最多长 2，因此没有 <code>000</code> 或 <code>111</code>。Q 长 6，小于等于 floor(3×5/2)=7。</p>\n<h2>少了“多数字符”信息，怎么解码</h2>\n<p>这是官方一句话中最容易漏掉的细节。接收者能读到 Q 的首字符 f 和第一段长度 d。首字符已经约定等于原串首字符：</p>\n<ul>\n<li>d=1，说明原首字符是多数字符，所以 b=f。</li>\n<li>d=2，说明原首字符是少数字符，所以 b=1−f。</li>\n</ul>\n<p>这样不需要额外发送标志位。之后扫描所有段：长度 1 还原成 b，长度 2 还原成 1−b。段数就是原串长度 n。</p>\n<p>在上述例子中，首字符为 0，首段长 1，所以 b=0；段长 <code>1,1,2,1,1</code> 还原为 <code>00100</code>。如果 P=<code>10000</code>，第一段长 2、字符为 1，接收者会算出 b=0，同样没有歧义。</p>\n<h2>为什么满足长度限制与唯一还原</h2>\n<p>设少数字符数量为 t，则 t≤floor(n/2)。n−t 个多数位各用 1 个字符，t 个少数位各用 2 个字符，总长为 n+t≤floor(3n/2)。</p>\n<p>相邻编码段使用不同字符，因此扫描出的极长相同字符段恰好就是编码段，不会合并。首段唯一确定 b，所有段长又唯一确定每个原字符，所以整个编码是可逆的。次数相同也没问题：发送端使用约定的选择，接收端仍能从第一段恢复该选择。</p>\n<h2>实现骨架</h2>\n<pre><code>encode(P):\n    b = 0 if count(0) &gt;= count(1) else 1\n    current = P[0]\n    for ch in P:\n        输出 1 个 current（ch==b），否则输出 2 个 current\n        current ^= 1\n\ndecode(Q):\n    提取各段长度 lengths\n    b = Q[0] if lengths[0]==1 else 1-Q[0]\n    每段长 1 输出 b，长 2 输出 1-b\n</code></pre>\n<p>时间、空间都是 O(n)。n=1 时只发送原字符本身，长度为 1，符合限制。</p>\n<h2>通信题特有的注意点</h2>\n<p>程序会独立运行两次，第二次拿不到第一次的内存，也不能依赖测试数据顺序。不要把 b 存全局数组后幻想第二次还能读取。每组要输出长度、字符串两行并刷新，再读取下一组；阶段由输入的 r 判断。测试时应覆盖“首字符是少数位”“0/1 数量相同”“全相同”“n 为奇数”，并检查 <code>decode(encode(P)) == P</code>。</p>\n<h2>完整代码（C++17）</h2>\n<pre><code>#include &lt;algorithm&gt;\n#include &lt;iostream&gt;\n#include &lt;string&gt;\nusing namespace std;\nint main(){ios::sync_with_stdio(false);cin.tie(nullptr);int T,role;cin&gt;&gt;T&gt;&gt;role;while(T--){int n;string s;cin&gt;&gt;n&gt;&gt;s;string answer;if(role==1){int ones=count(s.begin(),s.end(),&#x27;1&#x27;);char majority=ones&gt;n-ones?&#x27;1&#x27;:&#x27;0&#x27;,bit=s[0];for(char c:s){answer.append(c==majority?1:2,bit);bit^=1;}}else{int first=1;while(first&lt;n&amp;&amp;s[first]==s[0])++first;char shortBit=first==1?s[0]:char(s[0]^1);for(int i=0;i&lt;n;){int j=i+1;while(j&lt;n&amp;&amp;s[j]==s[i])++j;answer+=j-i==1?shortBit:char(shortBit^1);i=j;}}cout&lt;&lt;answer.size()&lt;&lt;&#x27;\\n&#x27;&lt;&lt;answer&lt;&lt;endl;}}\n</code></pre>\n<h2>在线验证</h2>\n<p>上面的完整 C++17 实现于 2026-11-14 通过 QOJ 正式评测：<a href=\"https://qoj.ac/submission/3453256\" target=\"_blank\" rel=\"noopener noreferrer\">提交 3453256（AC）</a>，用时 68 ms，内存 6044 KB。</p>"
+      }
+    },
+    {
+      "id": "ccpc-2026-乐山:C",
+      "site": "乐山",
+      "series": "CCPC",
+      "contest": "2026 CCPC 乐山站",
+      "date": "2026-11-08",
+      "index": "C",
+      "title": "猫狗狗猫",
+      "url": "https://qoj.ac/contest/4685/problem/24843",
+      "statement": {
+        "title": "猫狗狗猫（Cat, Dog, Dog, Cat）",
+        "description": "<p>来源：用户提供的 QOJ 乐山补题场题面截图（2026-11-09）；按截图整理中文题面，保留样例、约束和交互规则。</p>\n<p>VegiCat 和 VegiDog 玩取石子游戏。一堆石子共有 $n$ 颗，每步可以取走至少 $1$ 颗、至多 $k$ 颗，取走最后一颗石子的玩家获胜。</p>\n<p>本次游戏使用新的行动顺序：一个无限序列决定每一步由谁操作，<code>cat</code> 表示 VegiCat，<code>dog</code> 表示 VegiDog。</p>\n<p>序列最初只有 <code>cat</code>。之后不断复制当前完整序列，将副本中的 <code>cat</code> 全部替换为 <code>dog</code>、<code>dog</code> 全部替换为 <code>cat</code>，再将这个副本追加到当前序列的末尾：</p>\n<pre><code>cat\ncat, dog\ncat, dog, dog, cat\ncat, dog, dog, cat, dog, cat, cat, dog\n...\n</code></pre>\n<p>双方都使用最优策略，求谁会获胜。</p>\n<p><strong>时间限制：</strong>1 秒。<strong>空间限制：</strong>1024 MB。</p>",
+        "input": "<p>第一行包含整数 $T$（$1\\le T\\le2\\cdot10^5$），表示测试用例数。</p>\n<p>接下来 $T$ 行，每行包含两个整数 $n,k$（$1\\le n,k\\le10^9$），分别表示石子数和每步最多取走的数量。</p>",
+        "output": "<p>每个测试用例输出一行。若 VegiCat 获胜，输出 <code>cat</code>，否则输出 <code>dog</code>。</p>",
+        "hint": "",
+        "samples": [
+          {
+            "input": "3\n3 1\n3 2\n99824435 3",
+            "output": "dog\ndog\ncat"
+          }
+        ],
+        "sourceUrl": "https://qoj.ac/contest/4685"
+      },
+      "statementSource": {
+        "title": "2026 CCPC 乐山站 QOJ 题面截图",
+        "contest_url": "https://qoj.ac/contest/4685",
+        "obtained_at": "2026-11-09",
+        "note": "由用户逐题提供 A–M 共 13 题、20 张截图。pages 表示该题截图序号。未从截图推测未核验的 QOJ 单题编号。E 的截图没有显示时间限制，未自行补写。",
+        "screenshots": {
+          "A": [
+            {
+              "file": "statement_sources/ccpc2026leshan/A-1.png",
+              "sha256": "b85a3a0818c9314027eb02f9198b3432529fabf4a84423c7c9c97d4071278511"
+            }
+          ],
+          "B": [
+            {
+              "file": "statement_sources/ccpc2026leshan/B-1.png",
+              "sha256": "41c3a53f3b9960679c8b982aa2155fd4273f1171bf9658770e0e2c0e79da19d0"
+            },
+            {
+              "file": "statement_sources/ccpc2026leshan/B-2.png",
+              "sha256": "b81a5a5b6f69fe02d22ce099907c9566278483155ef2164ed6edba1f67683334"
+            }
+          ],
+          "C": [
+            {
+              "file": "statement_sources/ccpc2026leshan/C-1.png",
+              "sha256": "0d296a3f6a2600759a73cba02c497a3a9e82b3dbdc37392245f0fea32fc41eb5"
+            }
+          ],
+          "D": [
+            {
+              "file": "statement_sources/ccpc2026leshan/D-1.png",
+              "sha256": "16f2fa2e483aaecac335df0e2cd4534a7560119de92d9318fc64476da5476d66"
+            }
+          ],
+          "E": [
+            {
+              "file": "statement_sources/ccpc2026leshan/E-1.png",
+              "sha256": "a00313495e25c9784ff65eb3249194432214d18a51d8faf2f1c06a61d4171501"
+            },
+            {
+              "file": "statement_sources/ccpc2026leshan/E-2.png",
+              "sha256": "e4e218924ca2494bcf4487cadbe158c74ae291440d5e332dce15cf4caa1d26e5"
+            }
+          ],
+          "F": [
+            {
+              "file": "statement_sources/ccpc2026leshan/F-1.png",
+              "sha256": "15d849210930524b099290d35d081df3c0a6306b08d0eaa40f0add9412bf5781"
+            },
+            {
+              "file": "statement_sources/ccpc2026leshan/F-2.png",
+              "sha256": "96fb53df14a03d454ccd007530fe397f9c6cee14fece1c2e9098d82d2cddbb7a"
+            }
+          ],
+          "G": [
+            {
+              "file": "statement_sources/ccpc2026leshan/G-1.png",
+              "sha256": "b59e4d1ca4a6710ef2ec1bb19f680e42e41f54b5684b34cc375a1b2e46a462a3"
+            },
+            {
+              "file": "statement_sources/ccpc2026leshan/G-2.png",
+              "sha256": "e82cb403cca88091681aaf54158b68e42c95dba101c05921fcb701990449c2a8"
+            }
+          ],
+          "H": [
+            {
+              "file": "statement_sources/ccpc2026leshan/H-1.png",
+              "sha256": "899ce6da6760722044d9b5ac1a56d4d269ab308ab6b942b161cf2de90a8188bb"
+            },
+            {
+              "file": "statement_sources/ccpc2026leshan/H-2.png",
+              "sha256": "8c30ad33d05524345c77c06c4ad3a4cc8e78ee4d5781c6382ea8aff3d606fbeb"
+            }
+          ],
+          "I": [
+            {
+              "file": "statement_sources/ccpc2026leshan/I-1.png",
+              "sha256": "51a6df59fb6285d8a5fdf7314610a0147e0faa4f091b70c2bed87e381983397b"
+            },
+            {
+              "file": "statement_sources/ccpc2026leshan/I-2.png",
+              "sha256": "eec4feddd3b181f11bff9a29beabc253dfeb90fe8d752c2804a461ee696cb786"
+            }
+          ],
+          "J": [
+            {
+              "file": "statement_sources/ccpc2026leshan/J-1.png",
+              "sha256": "4589a3802e7b9bccf17653637577bc407e4c3999f45c659ce87b584fefea1bcb"
+            }
+          ],
+          "K": [
+            {
+              "file": "statement_sources/ccpc2026leshan/K-1.png",
+              "sha256": "fec2b00f65ef8c36d299964fa319a729f17febba8378049855b47de8e200616a"
+            },
+            {
+              "file": "statement_sources/ccpc2026leshan/K-2.png",
+              "sha256": "818777c959fe831e3508d7b4389e3347c96b07d43e662293f61842392578f7d2"
+            }
+          ],
+          "L": [
+            {
+              "file": "statement_sources/ccpc2026leshan/L-1.png",
+              "sha256": "7f063eb72bfbf9638b7e427710725fe352a62554cc12b49811442c6dcf9542f2"
+            }
+          ],
+          "M": [
+            {
+              "file": "statement_sources/ccpc2026leshan/M-1.png",
+              "sha256": "f7dbc0749f7b8c3b0fc2b8853874d879606c188b9f6fec2c6fb303a38a970915"
+            }
+          ]
+        }
+      },
+      "editorial": {
+        "problemId": "ccpc-2026-乐山:C",
+        "view": "full",
+        "revision": "2026-11-14.1",
+        "source": {
+          "title": "2026 CCPC 乐山站题面截图与独立推导",
+          "author": "本站整理",
+          "url": "https://qoj.ac/contest/4685",
+          "contest_url": "https://qoj.ac/contest/4685",
+          "kind": "independent",
+          "verified_at": "2026-11-14",
+          "note": "根据用户提供的英文题面截图独立推导，不是官方题解。截图证据及其哈希见 regional_statements.json；算法检查范围见逐题验证记录。 参考代码补齐并在线验证：13/13 份 C++17 实现已通过 QOJ，具体提交链接见各题。"
+        },
+        "pages": [],
+        "validation": "独立离线校验通过；完整 C++17 实现已通过 QOJ 正式评测（提交 3452810，19 ms，4192 KB）。",
+        "html": "<h1>C · 猫，狗，狗，猫</h1>\n<p>本文按用户提供的 QOJ 题面截图独立推导。</p>\n<h2>先学什么</h2>\n<p>先理解 Thue–Morse 序列：从零计数，第 $t$ 项为 $t$ 的二进制中 $1$ 的个数的奇偶性。再把轮到猫的决策看成区间“或”，轮到狗的决策看成区间“与”。</p>\n<h2>结论</h2>\n<p>将猫记为 $0$、狗记为 $1$。若 $k=1$，取完第 $n$ 颗石子的人固定是序列第 $n-1$ 项。</p>\n<p>若 $k\\ge2$，胜者是 Thue–Morse 序列的第 $\\lfloor n/(k+1)\\rfloor$ 项。于是只需计算一个整数的二进制奇偶性。</p>\n<h2>极小极大转移</h2>\n<p>设 $W_t(s)$ 表示第 $t$ 次操作之前还剩 $s$ 颗时，最终获胜的人。若当前玩家为 $a$，$s\\le k$ 时立即取完获胜；否则在 $W_{t+1}(s-1),\\ldots,W_{t+1}(s-k)$ 中，只要有一个等于 $a$，就选择它；全部是对手时才会输。</p>\n<p>Thue–Morse 每四项为 $a,\\bar a,\\bar a,a$，其中 $a$ 是第 $\\lfloor t/4\\rfloor$ 项。令 $L=k+1$，按 $s$ 分块：第零块为 $1,\\ldots,k$，第 $q\\ge1$ 块为 $qL,\\ldots,qL+k$。</p>\n<p><strong>四步引理：</strong>若四步之后的胜者在每个这样的块内恒定，依次做这四步逆向转移，得到的新块序列为 $a,\\bar a,f_0,f_1,\\ldots$，其中 $f$ 是原来的块序列。</p>\n<p>下面说明引理。以“最终由 $a$ 获胜”为真值，四步逆推的算子是“或、与、与、或”。先处理边界：令 $s=qL+r$，对 $q=0,1,2,3$ 逐段代入这四次区间转移，得到下表。第零块取 $1\\le r\\le k$，其他块取 $0\\le r\\le k$；其中 $f_0,f_1$ 可各自为任意真值，$k\\ge2$。</p>\n<table>\n<thead>\n<tr>\n<th>块编号</th>\n<th>四步逆推后的值</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>$0$</td>\n<td>$a$</td>\n</tr>\n<tr>\n<td>$1$</td>\n<td>$\\bar a$</td>\n</tr>\n<tr>\n<td>$2$</td>\n<td>$f_0$</td>\n</tr>\n<tr>\n<td>$3$</td>\n<td>$f_1$</td>\n</tr>\n</tbody>\n</table>\n<p>前两行也有直接的博弈解释：第零块当前玩家立即取完；第一块无论当前玩家取多少，最多剩 $2k$，对手连续拥有下两步，必能在两步内取完。后两行可按“或、与、与、或”的窗口逐次取值检查；$k=1$ 时它们不再成立。</p>\n<p>对 $q\\ge4$，$s\\ge4L&gt;4k$，四步窗口完全不触及终止边界。为分析这些窗口，可以把原第零块向左延伸成常值；这不会改变窗口中任何值。此时每个有限的真、假连续段长度至少为 $L=k+1$。对相邻 $k$ 个位置做“或”，使真值段向右扩张 $k-1$；做两次“与”，使它收缩 $2k-2$；最后一次“或”再扩张 $k-1$。第一次扩张后假段还剩至少 $2$，真段长度至少 $2k$；中间收缩不会消灭真段，最后扩张也不会合并两段。连同四个窗口本身各至少向右移一格的偏移，每个段最终整体右移 $2k+2=2L$，形状不变，恰好对应 $f_{q-2}$。边界表与这个平移共同证明四步引理。</p>\n<h2>为什么是二进制奇偶性</h2>\n<p>令第 $u$ 组四次操作的块序列为 $f_u$。引理给出</p>\n<p>$$\nf_u(0)=T(u),\\quad f_u(1)=1-T(u),\\quad f_u(q)=f_{u+1}(q-2)\\ (q\\ge2).\n$$</p>\n<p>候选 $f_u(q)=T(2u+q)$ 满足它：$T(2u)=T(u)$，$T(2u+1)=1-T(u)$，而右侧下标在递推中保持为 $2u+q$。可在有限的最大石子数上从足够靠后的任意块常值边界逆推；游戏至多经过石子数那么多步，边界取值不会影响真实答案。因此 $u=0$ 时确有 $f_0(q)=T(q)$。</p>\n<h2>复杂度</h2>\n<p>每组 $O(\\log n)$ 位运算、$O(1)$ 空间；内建 popcount 可以直接使用。输入达到 $2\\cdot10^5$ 组时无需建立博弈 DP 表。</p>\n<h2>完整代码（C++17）</h2>\n<pre><code>#include &lt;iostream&gt;\nusing namespace std;\nint main() {\n    ios::sync_with_stdio(false); cin.tie(nullptr);\n    int T; cin &gt;&gt; T;\n    while (T--) {\n        long long n, k; cin &gt;&gt; n &gt;&gt; k;\n        long long index = k == 1 ? n - 1 : n / (k + 1);\n        cout &lt;&lt; (__builtin_popcountll(index) % 2 ? &quot;dog&quot; : &quot;cat&quot;) &lt;&lt; &#x27;\\n&#x27;;\n    }\n}\n</code></pre>\n<h2>在线验证</h2>\n<p>上面的完整 C++17 实现于 2026-11-14 通过 QOJ 正式评测：<a href=\"https://qoj.ac/submission/3452810\" target=\"_blank\" rel=\"noopener noreferrer\">提交 3452810（AC）</a>，用时 19 ms，内存 4192 KB。</p>"
+      }
+    },
+    {
+      "id": "icpc-2026-沈阳:F",
+      "site": "沈阳",
+      "series": "ICPC",
+      "contest": "2026 ICPC 沈阳站",
+      "date": "2026-11-15",
+      "index": "F",
+      "title": "删除 MEX（MEX Removal）",
+      "url": "https://qoj.ac/contest/4699/problem/25339",
+      "statement": {
+        "title": "F. 删除 MEX（MEX Removal）",
+        "description": "<p>给定一个长度为 $n$ 的非降整数数组 $a$ 和一个正整数 $d$。你可以执行任意次以下操作：</p>\n<ul>\n<li>在当前数组中选取一个非空下标集合 $1\\le i_1&lt;i_2&lt;\\cdots&lt;i_k\\le |a|$，其中 $|a|$ 表示数组 $a$ 当前的长度，并删除这些下标处的元素。本次操作的代价为 $\\operatorname{mex} \\left( \\left\\{ \\left \\lfloor \\frac{a_{i_r}-a_{i_l}}{d} \\right \\rfloor\\ \\middle|\\ 1\\le l\\le r\\le k\\right\\}\\right)$，其中 $\\operatorname{mex}(S)$ 表示不属于集合 $S$ 的最小非负整数。</li>\n</ul>\n<p>你的目标是删除数组中的所有元素。求所有操作的总代价的最小值。</p>",
+        "input": "<p>输入的第一行包含一个整数 $T$ ($1\\le T\\le 10^5$)，表示测试数据组数。</p>\n<p>每组数据的第一行包含两个整数 $n$ ($1\\le n\\le 2\\times 10^5$) 和 $d$ ($1 \\le d \\le 10^9$)。</p>\n<p>每组数据的第二行包含 $n$ 个整数 $a_1,a_2,\\ldots,a_n$ ($1\\le a_1 \\le a_2 \\le \\cdots \\le a_n\\le 10^9$)。</p>\n<p>保证所有数据中 $n$ 的和不超过 $2\\times 10^5$。</p>",
+        "output": "<p>对于每组数据，输出一行一个整数，表示所有操作的总代价的最小值。</p>",
+        "hint": "<p>对于样例的第一组数据，一种最优策略是先删除第 $1,4$ 个位置上的元素，代价为 $\\operatorname{mex}\\left(\\left\\{ \\left \\lfloor \\frac{1-1}{2} \\right \\rfloor , \\left \\lfloor \\frac{5-1}{2} \\right \\rfloor , \\left \\lfloor \\frac{5-5}{2} \\right \\rfloor \\right\\}\\right)=\\operatorname{mex}\\{0,2\\}=1$。剩余数组为 $[2,3]$，可以通过一次代价为 $1$ 的操作将其全部删除。总代价为 $1+1=2$。</p>\n<p>对于样例的第二组数据，一种最优策略是先删除第 $1,2,3,4$ 个位置上的元素，代价为 $\\operatorname{mex}\\{0,1\\}=2$。剩余数组为 $[6,8]$，可以通过一次代价为 $1$ 的操作将其全部删除。总代价为 $2+1=3$。</p>\n<p>对于样例的第三组数据，直接用一次操作删除整个数组即可。</p>",
+        "samples": [
+          {
+            "input": "3\n4 2\n1 2 3 5\n6 3\n1 3 4 6 6 8\n8 9\n2 5 5 6 7 8 9 9",
+            "output": "2\n3\n1"
+          }
+        ],
+        "sourceUrl": "https://qoj.ac/contest/4699/problem/25339/statement/zh_cn"
+      },
+      "statementSource": {
+        "contest_url": "https://qoj.ac/contest/4699",
+        "attribution": "2026 ICPC 沈阳站，QOJ 中文题面",
+        "verified_at": "2026-11-17",
+        "access": "经用户授权的 QOJ 登录态读取；发布文件不包含账号、Cookie 或令牌。",
+        "processing": "完整保留原文、TeX、输入输出、交互协议、所有样例及本地配图。",
+        "problems": {
+          "A": {
+            "qoj_id": 25334,
+            "url": "https://qoj.ac/contest/4699/problem/25334/statement/zh_cn",
+            "article_sha256": "a33e431bb4efe8d80e01e2d37714548dd707226683f1e0d73ae5f7e53b2a7fba",
+            "sample_count": 1,
+            "images": []
+          },
+          "B": {
+            "qoj_id": 25335,
+            "url": "https://qoj.ac/contest/4699/problem/25335/statement/zh_cn",
+            "article_sha256": "976d8bd94d4bbf80989fb6b96d36ce58cda85f19b4a7cceed0ae2be2e96fcd08",
+            "sample_count": 1,
+            "images": [
+              {
+                "url": "https://qoj.ac/images/problems/problem_25335_1.png",
+                "local": "/statement-nov17-2026-problem_25335_1.png",
+                "sha256": "1272b2a62a733e62ed2683766604b94226a844dcaf001bc4068bca363e90eba3"
+              }
+            ]
+          },
+          "C": {
+            "qoj_id": 25336,
+            "url": "https://qoj.ac/contest/4699/problem/25336/statement/zh_cn",
+            "article_sha256": "594a59c49db30974ed81fbd3fcc9d95aa805252522d00dc751e8595ad5ba7930",
+            "sample_count": 1,
+            "images": [
+              {
+                "url": "https://qoj.ac/images/problems/problem_25336_1.png",
+                "local": "/statement-nov17-2026-problem_25336_1.png",
+                "sha256": "ab006d8d2908c1bf4795bf311e496758127ef5e4e46b93a0a51264e986bbf999"
+              },
+              {
+                "url": "https://qoj.ac/images/problems/problem_25336_2.png",
+                "local": "/statement-nov17-2026-problem_25336_2.png",
+                "sha256": "54ce884ad56346a6397154b100ab4d73b7d84b0c665a81bb4de17aa13a0ca189"
+              }
+            ]
+          },
+          "D": {
+            "qoj_id": 25337,
+            "url": "https://qoj.ac/contest/4699/problem/25337/statement/zh_cn",
+            "article_sha256": "aa05a23b1011a8ea3e9eaaea41c661179a358c78e9b4799a79082357414a3f9a",
+            "sample_count": 1,
+            "images": []
+          },
+          "E": {
+            "qoj_id": 25338,
+            "url": "https://qoj.ac/contest/4699/problem/25338/statement/zh_cn",
+            "article_sha256": "0b9ccf603ed1b42465f210db3d258837f2cece8b24f239a733830b788f936752",
+            "sample_count": 1,
+            "images": []
+          },
+          "F": {
+            "qoj_id": 25339,
+            "url": "https://qoj.ac/contest/4699/problem/25339/statement/zh_cn",
+            "article_sha256": "c70e1b15ceb22e430764105fb44cbcd46aecd8d6c4770dbdc420029a9777aa0f",
+            "sample_count": 1,
+            "images": []
+          },
+          "G": {
+            "qoj_id": 25340,
+            "url": "https://qoj.ac/contest/4699/problem/25340/statement/zh_cn",
+            "article_sha256": "7e9f22782b58b99502382aee24a0d36461879c2c3e10e93d4ecd5ef8f8e0799c",
+            "sample_count": 1,
+            "images": [
+              {
+                "url": "https://qoj.ac/images/problems/problem_25340_1.png",
+                "local": "/statement-nov17-2026-problem_25340_1.png",
+                "sha256": "17acb788c68a67335fa0d1f39ed4c8746d35f75e944c08ad4f5965ff2efc7f2f"
+              },
+              {
+                "url": "https://qoj.ac/images/problems/problem_25340_2.png",
+                "local": "/statement-nov17-2026-problem_25340_2.png",
+                "sha256": "4553758cf91d15f8879043ec0b2ac773457b7d6fecb282d3b537680cccf8fc3a"
+              }
+            ]
+          },
+          "H": {
+            "qoj_id": 25341,
+            "url": "https://qoj.ac/contest/4699/problem/25341/statement/zh_cn",
+            "article_sha256": "6690dbf844bc82161793ddb315db74aa4af09846a8e6b4c551c91cd824f7f5a0",
+            "sample_count": 1,
+            "images": [
+              {
+                "url": "https://qoj.ac/images/problems/problem_25341_1.png",
+                "local": "/statement-nov17-2026-problem_25341_1.png",
+                "sha256": "1d43915f1d040e52466c0c941405260fb23b6ac64a339a579cecef80b8fe2cc9"
+              },
+              {
+                "url": "https://qoj.ac/images/problems/problem_25341_2.png",
+                "local": "/statement-nov17-2026-problem_25341_2.png",
+                "sha256": "53da35e26fa5f4b1c7d822d6f8914f0d5924e4d733708433d8a69a29a704df44"
+              },
+              {
+                "url": "https://qoj.ac/images/problems/problem_25341_3.png",
+                "local": "/statement-nov17-2026-problem_25341_3.png",
+                "sha256": "e8777de5016d4a9fd79032a1ec0ceeed24d67f3a9fe7d74b0ac90eb8c70e8209"
+              }
+            ]
+          },
+          "I": {
+            "qoj_id": 25342,
+            "url": "https://qoj.ac/contest/4699/problem/25342/statement/zh_cn",
+            "article_sha256": "b002b59a1477364dec4b0664a8029b72a67c470ab04bf6733e002d1573dc1cf3",
+            "sample_count": 1,
+            "images": []
+          },
+          "J": {
+            "qoj_id": 25343,
+            "url": "https://qoj.ac/contest/4699/problem/25343/statement/zh_cn",
+            "article_sha256": "8ecfc3ba355baf00203e9ced1b33d3147a71027303637a675191341b1ddd80aa",
+            "sample_count": 1,
+            "images": []
+          },
+          "K": {
+            "qoj_id": 25344,
+            "url": "https://qoj.ac/contest/4699/problem/25344/statement/zh_cn",
+            "article_sha256": "cc2ee711ff6b0fedc8a56d0172123415594b846d74be433ed8619f865c4270b4",
+            "sample_count": 1,
+            "images": []
+          },
+          "L": {
+            "qoj_id": 25345,
+            "url": "https://qoj.ac/contest/4699/problem/25345/statement/zh_cn",
+            "article_sha256": "5766cf15ebd34e0776d11375d509d486041a38018becc92e024b8165d4c69186",
+            "sample_count": 1,
+            "images": []
+          },
+          "M": {
+            "qoj_id": 25346,
+            "url": "https://qoj.ac/contest/4699/problem/25346/statement/zh_cn",
+            "article_sha256": "caee1c45f58cf96f0094942f81fd33facb030bc210dc2b1e148fb6fec2a19ebb",
+            "sample_count": 1,
+            "images": []
+          }
+        }
+      },
+      "editorial": {
+        "problemId": "icpc-2026-沈阳:F",
+        "view": "full",
+        "revision": "2026-11-17-independent-v1",
+        "source": {
+          "title": "2026 沈阳站独立参考题解（非官方）",
+          "author": "gpt-6-astra 生成，Codex 校验与整理",
+          "url": "https://qoj.ac/contest/4699",
+          "contest_url": "https://qoj.ac/contest/4699",
+          "note": "根据已缓存的 QOJ 中文题面独立生成。验证范围逐题注明；本批未进行在线判题，不代表官方题解或在线 AC。"
+        },
+        "pages": [],
+        "validation": "非官方模型生成题解；C++17 编译通过，通过 1 组原题样例，通过 350 组独立小数据校验。未在 QOJ 在线提交验证。",
+        "html": "<h1>删除 MEX：答案至多为 3，区间约束压缩判二分图</h1>\n<h2>先学什么</h2>\n<ol>\n<li><strong>MEX 的含义</strong>：若集合含有 0，则 MEX 为 1 当且仅当不含 1；MEX 为 2 当且仅当含 1、但不含 2。</li>\n<li><strong>二分图与二染色</strong>：能否把顶点分成两个独立集，等价于能否让每条边的两个端点异色。</li>\n<li><strong>双指针</strong>：有序数组中，随阈值单调增加，第一个达到阈值的位置也单调增加。</li>\n<li><strong>差分与约束收缩</strong>：批量标记相邻位置必须相等，再把这些位置合并为连续块。</li>\n</ol>\n<h2>题意</h2>\n<p>给定非降数组。每次选出非空的一组元素并删除，费用是这组元素所有非负两两差除以 $d$ 向下取整后组成的集合的 MEX。</p>\n<p>删除操作不会改变剩余元素之间的数值差，因此可以等价地理解为：<strong>将原数组的所有位置划分成若干非空组，使各组费用之和最小。</strong></p>\n<p>下面实现和区间推导统一使用从 0 开始的下标。</p>\n<h2>核心推导</h2>\n<h3>1. 答案一定在 1、2、3 中</h3>\n<p>任何非空组都包含某个元素与自身的差，因此差值集合一定含有 0，每次操作的费用至少为 1。</p>\n<p>接下来构造总费用至多为 3 的方案。令</p>\n<p>$$b_i=\\left\\lfloor\\frac{a_i}{d}\\right\\rfloor,$$</p>\n<p>按照 $b_i\\bmod 3$ 将元素分成三组，忽略空组。</p>\n<p>考虑同组中的两个元素 $a_i\\le a_j$：</p>\n<ul>\n<li>若 $b_i=b_j$，则 $a_j-a_i&lt;d$；</li>\n<li>若 $b_i\\ne b_j$，由于它们模 3 同余，有 $b_j-b_i\\ge 3$，于是<br>\n  $$a_j-a_i\\ge 3d-(d-1)=2d+1.$$</li>\n</ul>\n<p>因此，同组中不存在落在 $[d,2d)$ 内的差值，也就不存在取整结果 1。每个非空组的 MEX 都是 1。</p>\n<p>所以答案至多为 3，结合费用至少为 1，只需判断答案是 1、2 还是 3。</p>\n<h3>2. 完整分类总代价不超过 2 的情况</h3>\n<p>记 $P_t$ 表示数组中存在一对元素，使得</p>\n<p>$$td\\le a_j-a_i&lt;(t+1)d.$$</p>\n<p>也就是说，整个数组对应的差值集合中含有整数 $t$。</p>\n<h4>答案为 1</h4>\n<p>只可能进行一次费用为 1 的操作，即直接删除全部元素。因此</p>\n<p>$$\\text{答案为 1}\\iff P_1\\text{ 不成立}.$$</p>\n<h4>答案为 2</h4>\n<p>因为每次费用都是正整数，总费用为 2 只有两种形式：</p>\n<ol>\n<li>一次费用为 2 的操作；</li>\n<li>两次费用均为 1 的操作。</li>\n</ol>\n<p>第一种形式必须一次删除整个数组。已经知道 $P_1$ 成立时，整个数组的 MEX 为 2 当且仅当 $P_2$ 不成立。</p>\n<p>因此可以先处理：</p>\n<ul>\n<li>若 $P_1$ 不成立，输出 1；</li>\n<li>否则，若 $P_2$ 不成立，输出 2。</li>\n</ul>\n<p>剩下的情况中，整个数组的差值集合包含 0、1、2，不可能通过一次费用为 2 的操作完成任务。此时只需判断能否划分成两个费用为 1 的组。</p>\n<h3>3. 两个费用为 1 的组，等价于二分图判定</h3>\n<p>建立无向图 $G$：每个数组位置对应一个顶点，对于 $i&lt;j$，当且仅当</p>\n<p>$$d\\le a_j-a_i&lt;2d$$</p>\n<p>时连接一条边。</p>\n<p>一组元素的费用为 1，当且仅当其中不存在上述差值，也就是这组顶点构成独立集。</p>\n<p>所以，将全部元素划分为两个费用为 1 的组，等价于把图分成两个独立集，也就等价于 <strong>$G$ 是二分图</strong>。</p>\n<p>但是图可能有 $\\Theta(n^2)$ 条边。例如，大量相同的小值和大量相同的大值之间，可以形成完全二分图。因此不能显式建立原图。</p>\n<h3>4. 利用右侧邻居的区间结构压缩图</h3>\n<p>对每个位置 $i$，定义</p>\n<p>$$L_i=\\min\\{j:a_j\\ge a_i+d\\},$$</p>\n<p>$$R_i=\\min\\{j:a_j\\ge a_i+2d\\},$$</p>\n<p>不存在时取 $n$。由于数组非降，顶点 $i$ 的所有右侧邻居恰好是右开区间</p>\n<p>$$[L_i,R_i).$$</p>\n<p>当该区间非空时，二染色要求区间中的每个顶点都与 $i$ 异色。因为只有两种颜色，这等价于：</p>\n<ol>\n<li>$[L_i,R_i)$ 中的所有顶点同色；</li>\n<li>$i$ 与 $L_i$ 异色。</li>\n</ol>\n<p>第一条又可以写成一系列相邻位置同色约束：</p>\n<p>$$\\operatorname{color}(t)=\\operatorname{color}(t+1),\\qquad L_i\\le t\\le R_i-2.$$</p>\n<p>于是，原本可能有很多条边的邻居区间，被替换为“一段相邻同色约束”和“一条异色约束”。</p>\n<h4>用差分一次性处理全部同色约束</h4>\n<p>把边界 $t$ 理解为原位置 $t$ 与 $t+1$ 之间的边界。</p>\n<p>对于每个非空邻居区间 $[L_i,R_i)$，需要标记的边界是 $[L_i,R_i-2]$。进行差分更新：</p>\n<p>$$\\text{delta}[L_i]++,\\qquad \\text{delta}[R_i-1]--.$$</p>\n<p>扫描差分前缀和：</p>\n<ul>\n<li>若边界 $t$ 的覆盖次数大于 0，则位置 $t$ 与 $t+1$ 必须同色，放入同一个块；</li>\n<li>若覆盖次数为 0，则在这里新建一个块。</li>\n</ul>\n<p>这些同色约束都只连接相邻位置，因此它们的连通分量恰好是连续块，不需要使用并查集。</p>\n<p>邻居区间只有一个元素时，两次差分更新发生在同一位置，自动抵消，符合“不需要额外同色约束”的事实。</p>\n<h4>收缩后只保留线性条边</h4>\n<p>将每个连续块收缩为一个顶点。对每个非空邻居区间，仅保留一条边：</p>\n<p>$$\\operatorname{block}(i)\\longleftrightarrow\\operatorname{block}(L_i).$$</p>\n<p>每个原位置最多贡献一条边，因此收缩图至多有 $n$ 条无向边。</p>\n<ul>\n<li>如果出现自环，说明同一个块被要求同时满足同色和异色，不存在合法二染色；</li>\n<li>否则对收缩图执行普通 BFS 二染色。</li>\n</ul>\n<p>有重复边也没有关系，边的总数仍然是线性的。</p>\n<h3>5. 如何在线性时间求区间并检查 $P_1,P_2$</h3>\n<p>随着 $i$ 增大，阈值 $a_i+d$ 和 $a_i+2d$ 都不减，所以使用两个只向右移动的指针，即可求出所有 $L_i,R_i$。</p>\n<ul>\n<li>若存在 $L_i&lt;R_i$，则 $P_1$ 成立。</li>\n<li>$R_i$ 已经是第一个满足 $a_j\\ge a_i+2d$ 的位置。因此，只要<br>\n  $$R_i&lt;n\\quad\\text{且}\\quad a_{R_i}&lt;a_i+3d,$$<br>\n  就说明 $P_2$ 成立。</li>\n</ul>\n<p>检查 $P_2$ 不需要额外的第三个指针。</p>\n<p>完整流程如下：</p>\n<ol>\n<li>双指针求右侧邻居区间，同时记录 $P_1,P_2$ 并建立差分数组。</li>\n<li>若没有 $P_1$，输出 1。</li>\n<li>否则，若没有 $P_2$，输出 2。</li>\n<li>根据差分数组收缩同色连续块，建立线性规模的图。</li>\n<li>收缩图是二分图则输出 2，否则输出 3。</li>\n</ol>\n<h2>正确性证明</h2>\n<h3>引理一：最优答案至少为 1，至多为 3</h3>\n<p>每个非空操作的差值集合都含有 0，所以费用至少为 1。按 $\\lfloor a_i/d\\rfloor\\bmod 3$ 分组后，每组都不存在差值落在 $[d,2d)$ 的元素对，因此每个非空组的费用为 1，最多使用三组。引理成立。</p>\n<h3>引理二：算法对直接返回 1 或 2 的分支判断正确</h3>\n<p>如果 $P_1$ 不成立，直接删除整个数组的费用为 1；结合引理一，这是最优答案。</p>\n<p>如果 $P_1$ 成立而 $P_2$ 不成立，整个数组的差值集合含 0、1 而不含 2，直接删除全部元素的费用为 2。同时 $P_1$ 成立说明总费用不可能为 1，因此最优答案为 2。</p>\n<h3>引理三：收缩图可二染色，当且仅当原图可二染色</h3>\n<p>若原图有合法二染色，则对每个顶点 $i$，它的所有右侧邻居都与它异色，所以这些邻居彼此同色。算法建立的每条相邻同色约束都成立，因而每个收缩块内部同色。给每个块赋予其内部颜色，就得到收缩图的合法二染色。</p>\n<p>反过来，若收缩图有合法二染色，把每个块的颜色赋给块内全部原顶点。对于原图的任意边 $i&lt;j$，有 $j\\in[L_i,R_i)$。整个邻居区间已被同色约束合并到一个块，所以 $j$ 与 $L_i$ 同色；收缩图中又保留了 $i$ 所在块与 $L_i$ 所在块之间的边，因此 $i,j$ 异色。所有原图边都满足要求。</p>\n<p>故两张图的二染色可行性完全等价。</p>\n<h3>定理：算法输出最小总代价</h3>\n<p>前两个直接返回的分支由引理二保证正确。</p>\n<p>其余情况中，$P_1,P_2$ 都成立：费用为 1 的方案不存在，一次费用为 2 的操作也不可能删除全部元素。总费用为 2 只能由两个费用为 1 的组构成，这等价于原图可二染色，又由引理三等价于收缩图可二染色。</p>\n<p>因此，收缩图是二分图时最优答案为 2；否则最优答案大于 2，结合引理一，只能为 3。算法正确。</p>\n<h2>复杂度</h2>\n<ul>\n<li>两个指针各移动至多 $n$ 次，时间为 $O(n)$。</li>\n<li>差分扫描、连续块编号均为 $O(n)$。</li>\n<li>收缩图至多有 $n$ 个顶点、$n$ 条无向边，建图和 BFS 均为 $O(n)$。</li>\n</ul>\n<p>每组测试的总时间复杂度为 <strong>$O(n)$</strong>，额外空间复杂度为 <strong>$O(n)$</strong>。所有测试的总时间复杂度为 $O(\\sum n)$。</p>\n<h2>边界与易错点</h2>\n<ol>\n<li><strong>区间左闭右开。</strong> 取整结果为 1 的条件是 $d\\le\\Delta&lt;2d$；差值恰好为 $2d$ 时不连边。</li>\n<li><strong>必须完整分类总代价为 2 的情况。</strong> 除了两次费用为 1，还应检查一次费用为 2 的操作。</li>\n<li><strong>重复元素不需要去重。</strong> 它们之间的差为 0，不产生图边，双指针和区间收缩仍然有效。</li>\n<li><strong>空邻居区间不更新差分、不添加边。</strong> 长度为 1 的邻居区间只产生一条异色约束。</li>\n<li><strong>收缩图可能出现自环。</strong> 这直接表示二染色不可能。</li>\n<li><strong>阈值必须用 64 位整数。</strong> $a_i+3d$ 最大可达到 $4\\times10^9$，超过有符号 32 位整数范围。</li>\n<li>当 $n=1$，或者所有元素的极差小于 $d$ 时，答案为 1；但极差很大也可能得到答案 1，不能仅凭最大值与最小值判断。</li>\n</ol>\n<h2>C++17 参考实现</h2>\n<pre><code>#include &lt;bits/stdc++.h&gt;\nusing namespace std;\n\nint solveCase(const vector&lt;long long&gt;&amp; a, long long d) {\n    const int n = static_cast&lt;int&gt;(a.size());\n\n    // first[i] is the first right neighbor, or -1 if there is none.\n    vector&lt;int&gt; first(n, -1);\n    vector&lt;int&gt; delta(n + 1, 0);\n\n    bool hasOne = false;\n    bool hasTwo = false;\n    int left = 0, right = 0;\n\n    for (int i = 0; i &lt; n; ++i) {\n        const long long threshold1 = a[i] + d;\n        const long long threshold2 = a[i] + 2LL * d;\n        const long long threshold3 = a[i] + 3LL * d;\n\n        while (left &lt; n &amp;&amp; a[left] &lt; threshold1) {\n            ++left;\n        }\n        while (right &lt; n &amp;&amp; a[right] &lt; threshold2) {\n            ++right;\n        }\n\n        // All right neighbors of i form [left, right).\n        if (left &lt; right) {\n            hasOne = true;\n            first[i] = left;\n\n            // Mark boundaries left, ..., right - 2 as equalities.\n            ++delta[left];\n            --delta[right - 1];\n        }\n\n        if (right &lt; n &amp;&amp; a[right] &lt; threshold3) {\n            hasTwo = true;\n        }\n    }\n\n    if (!hasOne) return 1;\n    if (!hasTwo) return 2;\n\n    vector&lt;int&gt; component(n, 0);\n    int componentCount = 1;\n    int coverage = 0;\n\n    for (int boundary = 0; boundary + 1 &lt; n; ++boundary) {\n        coverage += delta[boundary];\n        if (coverage == 0) {\n            ++componentCount;\n        }\n        component[boundary + 1] = componentCount - 1;\n    }\n\n    vector&lt;vector&lt;int&gt;&gt; graph(componentCount);\n    for (int i = 0; i &lt; n; ++i) {\n        if (first[i] == -1) continue;\n\n        const int u = component[i];\n        const int v = component[first[i]];\n        if (u == v) return 3;\n\n        graph[u].push_back(v);\n        graph[v].push_back(u);\n    }\n\n    vector&lt;int&gt; color(componentCount, -1);\n    vector&lt;int&gt; bfs;\n    bfs.reserve(componentCount);\n\n    for (int start = 0; start &lt; componentCount; ++start) {\n        if (color[start] != -1) continue;\n\n        bfs.clear();\n        bfs.push_back(start);\n        color[start] = 0;\n\n        for (size_t head = 0; head &lt; bfs.size(); ++head) {\n            const int u = bfs[head];\n            for (int v : graph[u]) {\n                if (color[v] == -1) {\n                    color[v] = color[u] ^ 1;\n                    bfs.push_back(v);\n                } else if (color[v] == color[u]) {\n                    return 3;\n                }\n            }\n        }\n    }\n\n    return 2;\n}\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n\n    int T;\n    cin &gt;&gt; T;\n    while (T--) {\n        int n;\n        long long d;\n        cin &gt;&gt; n &gt;&gt; d;\n\n        vector&lt;long long&gt; a(n);\n        for (long long&amp; x : a) cin &gt;&gt; x;\n\n        cout &lt;&lt; solveCase(a, d) &lt;&lt; &#x27;\\n&#x27;;\n    }\n    return 0;\n}\n</code></pre>\n<h2>验证范围</h2>\n<p>非官方模型生成题解；C++17 编译通过，通过 1 组原题样例，通过 350 组独立小数据校验。未在 QOJ 在线提交验证。</p>\n<p>无未解决部分。算法依赖题目保证数组非降；所有数值和阈值运算均使用 64 位整数。</p>"
+      }
+    }
+  ],
+  "recommendation": "我觉得这些题在赛时卡住了足够多的人，没做过的人大概率也要被卡住，值得专门拿出来练一练。",
+  "updatedAt": "2026-11-19"
+}

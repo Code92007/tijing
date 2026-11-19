@@ -3,6 +3,7 @@
 面向算法竞赛学习的题单、教学内容与比赛收藏网站。
 
 - 前端：纯 HTML/CSS/JavaScript，可同时部署到 GitHub Pages 和自己的 Caddy。
+- 区域赛题单：在“比赛收藏”中按年份选择，题面、样例和做法分别展开；支持赛站、题名与题号检索。
 - 题单：侧栏支持知识点、专题与子分组的三级展开，多知识点归类和可检索的技巧标签。
 - 导出：每个知识点及其全部子专题可导出为带版本号的 JSON 数据文件，或生成适合打印和群聊分享的 PDF 版题单；两种格式都会保留题目来源、难度、标签、备注与题解链接。
 - 个人进度：完成状态和本周进度保存在当前浏览器，无需账号，也不会改动共享题单。
@@ -103,7 +104,18 @@ caddy validate --config /etc/caddy/Caddyfile
 systemctl reload caddy
 ```
 
-Caddy 只发布 `/root/tijing/public` 中的 `index.html`、`styles.css`、`app.js`、`problem-set-export.js`、`config.js` 和 `.nojekyll`，不会暴露仓库根目录、数据库脚本或备份工作流。由于服务器全局关闭了 Caddy 的 HTTP 重定向，正式入口使用 `https://tijing.wannafly.cn/`。
+Caddy 只发布 `/root/tijing/public` 中的前端文件、`regionals/` 题单与 `vendor/katex/` 公式资源，不会暴露仓库根目录、数据库脚本或备份工作流。由于服务器全局关闭了 Caddy 的 HTTP 重定向，正式入口使用 `https://tijing.wannafly.cn/`。
+
+### 按年份补充区域赛题单
+
+入口：<https://tijing.wannafly.cn/#contests>。年份按降序排列，默认显示最新年份，只列出已经建好的年份。
+
+1. 新增或更新 `regionals/<年份>.json`，结构参考 `regionals/2026.json`。每年包含 `year`、`recommendation`、`updatedAt` 和 `problems`。每题保留赛站、比赛、题号、原题链接、题面来源、样例和题解验证范围。
+2. 在 `regionals/index.json` 的 `years` 数组登记 `{ "year": 2025, "file": "regionals/2025.json", "count": 题数 }`。同一年的题数变动时同步更新 `count`。
+3. 题面与题解 HTML 必须先经 cf-bot 的渲染及清理流程，不能直接放入未经清理的投稿 HTML；图片使用本地发布资源或可公开访问的固定链接。题解来源和验证说明随题保留。
+4. 修改题单后更新 `regional-problem-sets.js` 中的数据请求版本号，以及 `index.html` 中该脚本的版本号，再运行 `node --test tests/*.test.mjs` 并发布。
+
+年份与题目由仓库文件维护；知识点题单、比赛收藏原有的 Supabase 管理流程照常使用。KaTeX 从站内按需载入，题面和做法默认收起。
 
 ## 5. GitHub 自动备份
 

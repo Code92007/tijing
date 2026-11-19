@@ -655,7 +655,7 @@ const initialData = loadData();
 const state = {
   data: initialData,
   progress: loadProgress(initialData),
-  route: "knowledge",
+  route: location.hash === "#contests" ? "contests" : "knowledge",
   topicId: "graph",
   query: "",
   classicDifficulty: "全部",
@@ -1481,7 +1481,8 @@ function renderSidebar() {
     })
     .join("");
 
-  els.contestNavCount.textContent = state.data.contests.length;
+  els.contestNavCount.textContent = state.data.contests.length + (window.TijingRegionals?.count() || 0);
+  els.contestNavCount.title = "收藏比赛与区域赛精选题目总数";
   document.querySelectorAll("[data-route]").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.route === state.route && button.classList.contains("nav-item"));
   });
@@ -1512,12 +1513,15 @@ function renderSidebarChild(topic, depth) {
 }
 
 function renderTopbar() {
+  if (!location.hash || location.hash === "#contests") {
+    history.replaceState(null, "", state.route === "contests" ? "#contests" : location.pathname + location.search);
+  }
   const topic = getTopic(state.topicId);
   const path = getTopicPath(topic);
   els.breadcrumb.innerHTML = state.route === "knowledge"
     ? `<span>知识点题单</span><i data-lucide="chevron-right"></i>${path.slice(0, -1).map((item) => `<span>${escapeHtml(item.name)}</span><i data-lucide="chevron-right"></i>`).join("")}<strong>${escapeHtml(topic.name)}</strong>`
     : `<span>题径</span><i data-lucide="chevron-right"></i><strong>比赛收藏</strong>`;
-  els.globalSearch.placeholder = state.route === "knowledge" ? "搜索题目、OJ 或标签" : "搜索比赛、OJ 或标签";
+  els.globalSearch.placeholder = state.route === "knowledge" ? "搜索题目、OJ 或标签" : "搜索比赛、赛站、题名或题号";
   els.knowledgeView.hidden = state.route !== "knowledge";
   els.contestView.hidden = state.route !== "contests";
   renderSyncStatus();
@@ -1829,13 +1833,16 @@ function renderContests() {
         <div>
           <div class="topic-kicker"><i data-lucide="trophy"></i> CONTEST ARCHIVE</div>
           <h1>比赛收藏</h1>
-          <p>留下值得完整训练或赛后复盘的比赛，跨 OJ 建立自己的比赛档案。</p>
+          <p>收藏值得回看的比赛，也留住那些赛时没能跨过的题。</p>
         </div>
         <div class="contest-header-side">
-          <div class="contest-summary"><strong>${contests.length}</strong><span>场比赛</span></div>
+          ${window.TijingRegionals?.count() ? `<div class="contest-summary"><strong>${window.TijingRegionals.count()}</strong><span>道精选题</span></div>` : ""}
+          ${contests.length ? `<div class="contest-summary"><strong>${contests.length}</strong><span>场比赛</span></div>` : ""}
           ${canAdminEdit() ? `<button class="text-button" data-add="contest"><i data-lucide="plus"></i>添加比赛</button>` : ""}
         </div>
       </header>
+
+      ${window.TijingRegionals?.render(state.query) || ""}
 
       ${featured ? `
         <section class="section">
@@ -1853,7 +1860,7 @@ function renderContests() {
               <a class="primary-button" href="${escapeHtml(featured.url)}" target="_blank" rel="noreferrer">打开比赛 <i data-lucide="arrow-up-right"></i></a>
             </div>
           </article>
-        </section>` : renderEmpty("还没有收藏比赛", "添加一场值得训练或复盘的比赛。")}
+        </section>` : ""}
 
       ${rest.length ? `
         <section class="section">
@@ -2651,5 +2658,13 @@ initializeCloud().catch((error) => {
   cloud.status = "offline";
   cloud.error = error.message || "云端初始化失败";
   renderSyncStatus();
+});
+window.addEventListener("hashchange", () => {
+  if (!location.hash || location.hash === "#contests") navigate(location.hash === "#contests" ? "contests" : "knowledge");
+});
+window.TijingRegionals?.init(() => {
+  renderSidebar();
+  if (state.route === "contests") renderContests();
+  renderIcons();
 });
 render();

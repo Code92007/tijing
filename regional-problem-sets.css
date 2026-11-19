@@ -1,0 +1,54 @@
+.regional-collection { scroll-margin-top: 30px; }
+.regional-heading { align-items: center; }
+.regional-heading .topic-kicker { margin-bottom: 10px; }
+.regional-year { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--ink-soft); white-space: nowrap; }
+.regional-year select { border: 1px solid var(--line-strong); border-radius: 8px; padding: 9px 34px 9px 13px; background: var(--surface); color: var(--ink); }
+.regional-year select:focus-visible, .regional-panel summary:focus-visible { outline: 2px solid var(--green); outline-offset: 4px; }
+.regional-recommendation { display: flex; gap: 18px; padding: 18px 22px; border-left: 3px solid var(--green); background: var(--green-soft); border-radius: 0 8px 8px 0; }
+.regional-recommendation > span { flex-shrink: 0; font-size: 12px; font-weight: 600; color: var(--green-deep); padding-top: 3px; }
+.regional-recommendation p { margin: 0; font-size: 14px; line-height: 1.8; }
+.regional-count { margin: 22px 0 12px; font-size: 12px; color: var(--ink-soft); }
+.regional-list { display: grid; gap: 16px; }
+.regional-problem { min-width: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
+.regional-problem-header { display: flex; align-items: center; gap: 16px; padding: 22px 24px; }
+.regional-problem-index { flex-shrink: 0; display: grid; place-items: center; width: 44px; height: 48px; border: 1px solid var(--line); border-radius: 7px; color: var(--green); font-family: "DM Mono", monospace; font-size: 23px; }
+.regional-problem-title { flex: 1; min-width: 0; }
+.regional-problem-title p { margin: 0 0 6px; font-size: 12px; color: var(--ink-soft); }
+.regional-problem-title h3 { margin: 0; font-size: 18px; overflow-wrap: anywhere; }
+.regional-problem-header > a { flex-shrink: 0; font-size: 12px; }
+.regional-panel { border-top: 1px solid var(--line); }
+.regional-panel summary { padding: 14px 24px; cursor: pointer; font-size: 13px; color: var(--green-deep); font-weight: 500; }
+.regional-panel summary:hover { background: var(--surface-muted); }
+.regional-panel[open] summary { background: var(--surface-muted); }
+.regional-prose { padding: 8px 28px 24px; font-size: 14px; line-height: 1.9; overflow-wrap: anywhere; }
+.regional-prose h1, .regional-prose h2 { margin: 26px 0 12px; font-size: 20px; line-height: 1.6; }
+.regional-prose h3 { margin: 24px 0 10px; font-size: 17px; line-height: 1.6; }
+.regional-prose h4 { font-size: 15px; margin: 18px 0 8px; }
+.regional-prose h5 { font-size: 12px; margin: 6px 0; color: var(--ink-soft); }
+.regional-prose a { color: var(--green); text-underline-offset: 3px; }
+.regional-prose pre { max-width: 100%; overflow: auto; padding: 16px; background: var(--surface-muted); border-radius: 8px; font-size: 12px; line-height: 1.7; white-space: pre; overflow-wrap: normal; }
+.regional-prose code { font-family: "DM Mono", ui-monospace, monospace; }
+.regional-prose img { max-width: 100%; height: auto; }
+.regional-prose blockquote { margin: 16px 0; padding: 4px 16px; border-left: 3px solid var(--line-strong); color: var(--ink-soft); }
+.regional-prose table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+.regional-prose td, .regional-prose th { border: 1px solid var(--line); padding: 6px 12px; }
+.regional-prose .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+.regional-source { font-size: 12px; color: var(--ink-soft); border-top: 1px solid var(--line); margin-top: 20px; padding-top: 10px; }
+.regional-source p { margin: 6px 0; }
+.regional-sample-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.regional-sample-grid > div { min-width: 0; }
+.regional-sample-grid pre { margin-top: 0; }
+.regional-message { padding: 26px; text-align: center; color: var(--ink-soft); font-size: 14px; }
+@media (max-width: 640px) {
+  .regional-heading { align-items: flex-start; flex-direction: column; gap: 14px; }
+  .regional-year { align-self: flex-start; }
+  .regional-recommendation { display: block; padding: 16px 18px; }
+  .regional-recommendation > span { display: block; margin-bottom: 6px; }
+  .regional-problem-header { flex-wrap: wrap; gap: 12px; padding: 18px; }
+  .regional-problem-header > a { margin-left: 56px; }
+  .regional-problem-title { flex-basis: calc(100% - 56px); }
+  .regional-problem-title h3 { font-size: 16px; }
+  .regional-panel summary { padding: 14px 18px; }
+  .regional-prose { padding: 8px 18px 20px; }
+  .regional-sample-grid { grid-template-columns: 1fr; gap: 0; }
+}
